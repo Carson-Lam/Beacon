@@ -1,0 +1,31 @@
+name: CI
+
+# Push to both main & dev
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install flake8
+          pip install pytest
+
+      - name: Lint
+        run: flake8 . --count --max-line-length=120 --exclude=.venv,__pycache__
+
+      - name: Test (placeholder)
+        run: pytest --collect-only || true
