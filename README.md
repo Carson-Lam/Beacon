@@ -4,7 +4,7 @@
 ![Python](https://img.shields.io/badge/Python-3.13-blue)
 ![Kafka](https://img.shields.io/badge/Apache%20Kafka-7.6.0-black)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED)
-![CI](https://github.com/Carson_Lam/beacon/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/Carson-Lam/Beacon/actions/workflows/ci.yml/badge.svg)
 
 Beacon is a real-time financial market intelligence platform that ingests live market data, processes it through a streaming pipeline, and surfaces actionable research insights via a dashboard and AI agent interface.
 

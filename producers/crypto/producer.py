@@ -28,6 +28,7 @@ async def on_trade(trade):
     producer.send(TOPIC, value=payload)
     print(f"[TRADE] {trade.symbol} @ {trade.price}")
 
+
 async def on_quote(quote):
     payload = {
         "type": "quote",
