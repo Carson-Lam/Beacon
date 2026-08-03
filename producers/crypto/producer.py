@@ -17,6 +17,7 @@ producer = KafkaProducer(
     value_serializer=lambda v: json.dumps(v).encode("utf-8")
 )
 
+
 async def on_trade(trade):
     payload = {
         "type": "trade",
