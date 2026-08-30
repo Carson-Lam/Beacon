@@ -37,6 +37,12 @@ ref_rsi14 = pta.rsi(close, length=14)
 ref_bb = pta.bbands(close, length=20, std=2)
 ref_macd = pta.macd(close, fast=12, slow=26, signal=9)
 
+def find_col(df, prefix):
+    matches = [c for c in df.columns if c.startswith(prefix)]
+    if not matches:
+        raise KeyError(f"No column starting with '{prefix}' in {list(df.columns)}")
+    return df[matches[0]]
+
 def compare(name, ours, ref):
     diff = (ours - ref).abs()
     print(f"{name:12s}  max_abs_diff={diff.max():.6f}  mean_abs_diff={diff.mean():.6f}")
@@ -44,7 +50,7 @@ def compare(name, ours, ref):
 print(f"AAPL, {len(df)} 1-min bars over the last 7 days\n")
 compare("SMA-20", our_sma20, ref_sma20)
 compare("RSI-14", our_rsi14, ref_rsi14)
-compare("BB upper", our_bb_upper, ref_bb["BBU_20_2.0"])
-compare("BB lower", our_bb_lower, ref_bb["BBL_20_2.0"])
-compare("MACD", our_macd, ref_macd["MACD_12_26_9"])
-compare("MACD signal", our_signal, ref_macd["MACDs_12_26_9"])
+compare("BB upper", our_bb_upper, find_col(ref_bb, "BBU_20"))
+compare("BB lower", our_bb_lower, find_col(ref_bb, "BBL_20"))
+compare("MACD", our_macd, find_col(ref_macd, "MACD_12_26_9"))
+compare("MACD signal", our_signal, find_col(ref_macd, "MACDs_12_26_9"))
