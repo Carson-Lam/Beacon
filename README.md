@@ -11,7 +11,6 @@ Beacon is a real-time financial market intelligence platform that ingests live m
 
 ## Architecture
 
-> Phase 1 diagram — coming soon
 
 **Current stack:**
 - **Ingestion:** Alpaca Markets WebSocket (equities + crypto) → Apache Kafka
@@ -53,15 +52,28 @@ pip install -r producers/equities/requirements.txt
 python producers/equities/producer.py
 ```
 
+**5. Run the Spark streaming consumer**
+```bash
+docker compose up -d spark-master spark-worker
+docker exec -it beacon-spark-master spark-submit \
+  --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1 \
+  /opt/spark-apps/consumers/equities_consumer.py
+```
+Spark master UI: http://localhost:8080 
+
 ## Project Structure
 ```
 beacon/
 ├── producers/
-│ ├── equities/ # Alpaca equities WebSocket producer
-│ └── crypto/ # Alpaca crypto WebSocket producer
-├── consumers/ # Kafka consumers (Phase 2)
+│ ├── equities/ 
+│ └── crypto/ 
+├── consumers/
+├── spark/
+│ ├── consumers/ 
+│ └── indicators/ 
+├── scripts/ 
 ├── docs/
-│ └── adr/ # Architectural Decision Records
+│ └── adr/ 
 ├── docker-compose.yml
 └── .github/
 └── workflows/
