@@ -74,6 +74,8 @@ def make_ohlcv(window_duration: str):
 
 
 def process_1min_batch(batch_df, batch_id):
+    count = batch_df.count()
+    print(f"[1min batch {batch_id}] rows={count}", flush=True)
     if batch_df.rdd.isEmpty():
         return
 
@@ -99,7 +101,6 @@ def process_1min_batch(batch_df, batch_id):
         macd_line, macd_signal, macd_hist = macd(close, 12, 26, 9)
 
         features = pd.DataFrame({
-            "symbol": symbol,
             "window_start": history["window_start"],
             "window_end": history["window_end"],
             "close": close,
