@@ -7,3 +7,5 @@ venv/
 .DS_Store
 *.log
 kafka_logs.txt
+data/
+spark/.ivy2/

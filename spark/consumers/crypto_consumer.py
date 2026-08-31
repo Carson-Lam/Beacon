@@ -1,10 +1,8 @@
 """
 Spark Structured Streaming consumer for market.equities taking OHLCV bars + technical indicators
 
-1-min bars and indicators are computed in a single streaming query via
-foreachBatch
-
-5-min bars are written separately with no indicators using Spark's native Parquet sink, same as before.
+Mirrors spark/consumers/equities_consumer.py. Identical payload schema
+({type, symbol, price, size, timestamp} for trades).
 
 """
 
@@ -19,12 +17,12 @@ from pyspark.sql.types import StructType, StructField, StringType, DoubleType, T
 from indicators.ta_indicators import sma, rsi, bollinger_bands, macd
 
 KAFKA_BOOTSTRAP = "kafka:29092"
-TOPIC = "market.equities"
-OHLCV_BASE = "/opt/spark-data/ohlcv/equities"
-FEATURES_BASE = "/opt/spark-data/features/equities"
-CHECKPOINT_BASE = "/opt/spark-data/_checkpoints/equities"
+TOPIC = "market.crypto"
+OHLCV_BASE = "/opt/spark-data/ohlcv/crypto"
+FEATURES_BASE = "/opt/spark-data/features/crypto"
+CHECKPOINT_BASE = "/opt/spark-data/_checkpoints/crypto"
 
-MIN_LOOKBACK_BARS = 60  
+MIN_LOOKBACK_BARS = 60
 
 schema = StructType([
     StructField("type", StringType()),
@@ -36,7 +34,7 @@ schema = StructType([
     StructField("timestamp", TimestampType()),
 ])
 
-spark = SparkSession.builder.appName("beacon-equities-ohlcv").getOrCreate()
+spark = SparkSession.builder.appName("beacon-crypto-ohlcv").getOrCreate()
 spark.sparkContext.setLogLevel("WARN")
 
 raw = (
@@ -79,10 +77,8 @@ def process_1min_batch(batch_df, batch_id):
     if batch_df.rdd.isEmpty():
         return
 
-    # Write the new OHLCV bars first 
     batch_df.write.mode("append").parquet(f"{OHLCV_BASE}/1min")
 
-    # Compute indicators per symbol that got a new bar this batch
     new_bars = batch_df.toPandas()
     for symbol in new_bars["symbol"].unique():
         new_window_starts = set(new_bars.loc[new_bars["symbol"] == symbol, "window_start"])
@@ -120,8 +116,9 @@ def process_1min_batch(batch_df, batch_id):
 
         new_rows = features[features["window_start"].isin(new_window_starts)]
         if not new_rows.empty:
+            safe_symbol = symbol.replace("/", "-")  # Replace / with - for safe file paths
             spark.createDataFrame(new_rows).write.mode("append").parquet(
-                f"{FEATURES_BASE}/symbol={symbol}"
+                f"{FEATURES_BASE}/symbol={safe_symbol}"
             )
 
 
