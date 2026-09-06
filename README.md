@@ -61,25 +61,6 @@ docker exec -it beacon-spark-master spark-submit \
 ```
 Spark master UI: http://localhost:8080 
 
-## Project Structure
-```
-beacon/
-├── producers/
-│ ├── equities/ 
-│ └── crypto/ 
-├── consumers/
-├── spark/
-│ ├── consumers/ 
-│ └── indicators/ 
-├── scripts/ 
-├── docs/
-│ └── adr/ 
-├── docker-compose.yml
-└── .github/
-└── workflows/
-└── ci.yml
-```
-
 ## Architectural Decision Records
 
 - [ADR-001: Kafka as the Streaming Backbone](docs/adr/ADR-001-kafka-over-polling.md)
