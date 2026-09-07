@@ -59,6 +59,7 @@ services:
       kafka-topics --create --if-not-exists --bootstrap-server kafka:29092 --topic market.crypto --partitions 3 --replication-factor 1
       kafka-topics --create --if-not-exists --bootstrap-server kafka:29092 --topic sentiment.raw --partitions 3 --replication-factor 1
       kafka-topics --create --if-not-exists --bootstrap-server kafka:29092 --topic sentiment.reddit --partitions 3 --replication-factor 1
+      kafka-topics --create --if-not-exists --bootstrap-server kafka:29092 --topic sentiment.stocktwits --partitions 3 --replication-factor 1
       echo 'Topics created.'
       "
     restart: on-failure
