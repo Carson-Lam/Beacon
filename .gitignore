@@ -9,3 +9,4 @@ venv/
 kafka_logs.txt
 data/
 spark/.ivy2/
+scripts/
