@@ -108,7 +108,7 @@ services:
       - airflow_pg_data:/var/lib/postgresql/data
 
   airflow-init:
-    image: apache/airflow:2.9.0
+    build: ./airflow
     container_name: beacon-airflow-init
     depends_on:
       - postgres-airflow
@@ -129,7 +129,7 @@ services:
       - ./airflow/dags:/opt/airflow/dags
 
   airflow-webserver:
-    image: apache/airflow:2.9.0
+    build: ./airflow
     container_name: beacon-airflow-webserver
     depends_on:
       - airflow-init
@@ -142,7 +142,7 @@ services:
     command: webserver
 
   airflow-scheduler:
-    image: apache/airflow:2.9.0
+    build: ./airflow
     container_name: beacon-airflow-scheduler
     depends_on:
       - airflow-init
@@ -150,6 +150,9 @@ services:
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
+      - ./spark:/opt/airflow/shared/spark:ro
+      - ./config:/opt/airflow/config:ro
+      - ./data:/opt/airflow/data
     command: scheduler
 
 volumes:
