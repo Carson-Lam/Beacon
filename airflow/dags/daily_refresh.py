@@ -38,7 +38,7 @@ def fetch_daily(**context):
     # context["ds"] is Airflow's *logical date* for this run 
     # for a daily DAG, this is the start of the scheduled interval
     # so 6pm yesterday, this is typically yesterday's date
-    target_date = context["ds"]
+    target_date = context["ds"] # testing date "2026-09-25"
     end_date = (datetime.strptime(target_date, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
 
     os.makedirs(f"{TMP_BASE}/raw", exist_ok=True)
@@ -47,8 +47,16 @@ def fetch_daily(**context):
         df = yf.download(ticker, start=target_date, end=end_date, interval="1d", progress=False)
         df = df.dropna()
 
+        # yfinance returns a MultiIndex for some tickers like (ticker,field)
+        # flatten this to just plain field names like ("Open")
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = df.columns.get_level_values(0)
+
+        if df.empty:
+            # yfinance returns empty object for non-trading days
+            # log and skip non trading days
+            print(f"[FETCH] {ticker}: 0 bar(s) for {target_date}: no file written")
+            continue
 
         df = df.reset_index()
         df.to_parquet(f"{TMP_BASE}/raw/{ticker}.parquet", index=False)
@@ -62,13 +70,15 @@ def validate_data(**context):
     required_cols = ["Open", "High", "Low", "Close", "Volume"]
 
     for ticker in tickers:
-        df = pd.read_parquet(f"{TMP_BASE}/raw/{ticker}.parquet")
+        raw_path = f"{TMP_BASE}/raw/{ticker}.parquet"
 
-        if len(df) == 0:
+        if not os.path.exists(raw_path):
             # yfinance returns no rows for non trading days
             # log and skip non trading days
-            print(f"[VALIDATE] {ticker}: 0 rows: likely a market holiday, skipping")
+            print(f"[VALIDATE] {ticker}: no file (likely a market holiday), skipping")
             continue
+
+        df = pd.read_parquet(raw_path)
 
         missing = [c for c in required_cols if c not in df.columns]
         if missing:
@@ -91,11 +101,12 @@ def compute_indicators_task(**context):
     os.makedirs(f"{TMP_BASE}/features", exist_ok=True)
 
     for ticker in tickers:
-        new_raw = pd.read_parquet(f"{TMP_BASE}/raw/{ticker}.parquet")
-        if new_raw.empty:
+        raw_path = f"{TMP_BASE}/raw/{ticker}.parquet"
+        if not os.path.exists(raw_path):
             print(f"[INDICATORS] {ticker}: no new data this run, skipping")
             continue
 
+        new_raw = pd.read_parquet(raw_path)
         existing = pd.read_parquet(f"{FINAL_BASE}/symbol={ticker}/data.parquet")
 
         new_row = pd.DataFrame({
