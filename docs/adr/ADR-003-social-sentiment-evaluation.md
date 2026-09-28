@@ -1,4 +1,4 @@
-# ADR-003: Social Sentiment Data Sources
+# ADR-003: Social Sentiment Evaluation
 
 **Date:** 2026-09-27
 **Status:** Accepted (Reddit ingestion currently blocked)

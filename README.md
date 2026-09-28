@@ -13,6 +13,8 @@ Beacon is a real-time financial market intelligence platform that ingests live m
 
 ## Architecture
 
+![Beacon architecture](docs\diagrams\Beacon-architecture.png)
+
 **Current stack:**
 - **Ingestion:** Alpaca Markets WebSocket (equities + crypto), StockTwits REST polling → Apache Kafka
 - **Topics:** `market.equities`, `market.crypto`, `sentiment.reddit`, `sentiment.stocktwits`, `sentiment.scored` 
@@ -41,7 +43,6 @@ beacon/
 │   ├── dags/                   # historical_backfill, daily_refresh
 │   └── Dockerfile
 ├── config/tickers.yaml         # Tracked equities for the Airflow DAGs
-├── scripts/                    
 ├── docs/adr/                   # Architecture Decision Records
 ├── data/                       # Parquet output 
 └── docker-compose.yml
@@ -132,5 +133,5 @@ UI accessible at http://localhost:8082 (Login: 'admin' / 'admin'). Trigger `hist
 ## Architectural Decision Records
 - [ADR-001: Kafka as the Streaming Backbone](docs/adr/ADR-001-kafka-over-polling.md)
 - [ADR-002: Reddit Sentiment Ingestion](docs/adr/ADR-002-reddit-sentiment-ingestion.md)
-- [ADR-003: Social Sentiment Data Sources](docs/adr/ADR-003-social-sentiment-sources.md)
+- [ADR-003: Social Sentiment Data Sources](docs/adr/ADR-003-social-sentiment-evaluation.md)
 - [ADR-004: Spark Structured Streaming vs. Flink](docs/adr/ADR-004-spark-vs-flink.md)
