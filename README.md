@@ -13,7 +13,7 @@ Beacon is a real-time financial market intelligence platform that ingests live m
 
 ## Architecture
 
-![Beacon architecture](docs\diagrams\Beacon-architecture.png)
+![Beacon architecture](docs/diagrams/Beacon-architecture.png)
 
 **Current stack:**
 - **Ingestion:** Alpaca Markets WebSocket (equities + crypto), StockTwits REST polling → Apache Kafka
