@@ -47,7 +47,7 @@ def fetch_daily(**context):
         df = yf.download(ticker, start=target_date, end=end_date, interval="1d", progress=False)
         df = df.dropna()
 
-        # yfinance returns a MultiIndex for some tickers like (ticker,field)
+        # yfinance returns multiIndex columns for some tickers like (ticker,field)
         # flatten this to just plain field names like ("Open")
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = df.columns.get_level_values(0)
