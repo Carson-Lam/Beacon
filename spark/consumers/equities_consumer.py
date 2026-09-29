@@ -36,7 +36,12 @@ schema = StructType([
     StructField("timestamp", TimestampType()),
 ])
 
-spark = SparkSession.builder.appName("beacon-equities-ohlcv").getOrCreate()
+spark = (
+    SparkSession.builder.appName("beacon-equities-ohlcv")
+    .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+    .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+    .getOrCreate()
+)
 spark.sparkContext.setLogLevel("WARN")
 
 raw = (

@@ -86,12 +86,12 @@ docker compose up -d spark-master spark-worker
 
 # Crypto (24/7)
 docker exec -it beacon-spark-master spark-submit \
-  --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1 \
+  --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1,io.delta:delta-spark_2.12:3.2.0 \
   /opt/spark-apps/consumers/crypto_consumer.py
 
 # Equities (market hours only)
 docker exec -it beacon-spark-master spark-submit \
-  --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1 \
+  --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1,io.delta:delta-spark_2.12:3.2.0 \
   /opt/spark-apps/consumers/equities_consumer.py
 ```
 Spark master UI: http://localhost:8080 
