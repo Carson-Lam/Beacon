@@ -3,7 +3,7 @@ historical_backfill
 
 One-time DAG that pulls 2 years of daily OHLCV per tracked equity via
 yfinance, computes the sameindicators the streaming consumer computes
-live, and writes partitioned Parquet to features/equities/historical/.
+live, and writes partitioned Parquet to silver/equities_historical/.
 
 """
 
@@ -15,9 +15,8 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator 
 
 TMP_BASE = "/opt/airflow/data/_tmp/historical"
-FINAL_BASE = "/opt/airflow/data/features/equities/historical"
+FINAL_BASE = "/opt/airflow/data/silver/equities_historical"
 CONFIG_PATH = "/opt/airflow/config/tickers.yaml"
-
 
 def load_tickers():
     import yaml

@@ -18,8 +18,8 @@ from indicators.ta_indicators import sma, rsi, bollinger_bands, macd
 
 KAFKA_BOOTSTRAP = "kafka:29092"
 TOPIC = "market.crypto"
-OHLCV_BASE = "/opt/spark-data/ohlcv/crypto"
-FEATURES_BASE = "/opt/spark-data/features/crypto"
+OHLCV_BASE = "/opt/spark-data/silver/ohlcv/crypto"
+FEATURES_BASE = "/opt/spark-data/silver/indicators/crypto"
 CHECKPOINT_BASE = "/opt/spark-data/_checkpoints/crypto"
 
 MIN_LOOKBACK_BARS = 60
@@ -34,12 +34,13 @@ schema = StructType([
     StructField("timestamp", TimestampType()),
 ])
 
-spark = (
-    SparkSession.builder.appName("beacon-crypto-ohlcv")
-    .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
-    .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
-    .getOrCreate()
-)
+spark = SparkSession.builder.appName("beacon-crypto-ohlcv").getOrCreate()
+# spark = (
+#     SparkSession.builder.appName("beacon-crypto-ohlcv")
+#     .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+#     .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+#     .getOrCreate()
+# )
 spark.sparkContext.setLogLevel("WARN")
 
 raw = (

@@ -7,7 +7,7 @@ into existing history, recomputes indicators over the full series, and
 overwrites the historical feature store.
 
 Assumes that historical_backfill has already populated
-features/equities/historical/symbol=<TICKER>/data.parquet 
+silver/equities_historical/symbol=<TICKER>/data.parquet 
 and merges new info into that file.
 """
 
@@ -18,7 +18,7 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 
 TMP_BASE = "/opt/airflow/data/_tmp/daily_refresh"
-FINAL_BASE = "/opt/airflow/data/features/equities/historical"
+FINAL_BASE = "/opt/airflow/data/silver/equities_historical"
 CONFIG_PATH = "/opt/airflow/config/tickers.yaml"
 
 

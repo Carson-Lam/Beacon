@@ -11,7 +11,7 @@
 Beacon is a real-time financial market intelligence platform that ingests live market data, processes it through a streaming pipeline, and surfaces actionable research insights via a dashboard and AI agent interface.
 
 
-## Architecture
+## Data Architecture
 
 ![Beacon architecture](docs/diagrams/Beacon-architecture.png)
 
@@ -23,6 +23,16 @@ Beacon is a real-time financial market intelligence platform that ingests live m
 - **Storage:** Parquet (local); dbt + Delta Lake + DuckDB + Snowflake *(Phase 3)*
 - **ML:** FinBERT sentiment, Isolation Forest anomaly detection *(Phase 3)*
 - **Serving:** FastAPI + Streamlit + MCP server *(Phase 4)*
+
+## Data Storage
+
+Beacon uses a medallion layout under `data/`. Each layer has one job and one set of readers.
+
+| Layer | Contents | Written by | Read by |
+|---|---|---|---|
+| **Bronze** `data/bronze/kafka/` | Raw market messages | `bronze_consumer` (Spark) | Replay and debugging, rebuilding silver |
+| **Silver** `data/silver/` | OHLCV bars, indicators, daily equity history, scored posts, sentiment aggregates | Spark consumers, Airflow DAGs, FinBERT scorer | dbt staging models |
+| **Gold** `data/gold/` | dbt marts | dbt | Dashboard, feature store, MCP server |
 
 ## Project Structure
 
@@ -44,7 +54,7 @@ beacon/
 │   └── Dockerfile
 ├── config/tickers.yaml         # Tracked equities for the Airflow DAGs
 ├── docs/adr/                   # Architecture Decision Records
-├── data/                       # Parquet output 
+├── data/                       # Lakehouse (gitignored): bronze/; silver; gold;
 └── docker-compose.yml
 ```
 
@@ -84,6 +94,11 @@ python producers/equities/producer.py
 ```bash
 docker compose up -d spark-master spark-worker
 
+# Bronze data lakehouse
+docker exec -it beacon-spark-master /opt/spark/bin/spark-submit \
+  --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1,io.delta:delta-spark_2.12:3.2.0 \
+  /opt/spark-apps/consumers/bronze_consumer.py
+
 # Crypto (24/7)
 docker exec -it beacon-spark-master spark-submit \
   --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1,io.delta:delta-spark_2.12:3.2.0 \
@@ -96,7 +111,7 @@ docker exec -it beacon-spark-master spark-submit \
 ```
 Spark master UI: http://localhost:8080 
 
-Output lands in `data/ohlcv/` (1-min and 5-min bars) and `data/features/` (indicators).
+Raw messages land in (`data/bronze/kafka/`). Bars go to (`data/silver/ohlcv/`), indicators to (`data/silver/indicators/`).
 
 **6. Run the sentiment pipeline**
 
@@ -116,7 +131,7 @@ The Reddit producer (`producers/reddit/`) is implemented but inactive. Reddit re
 
 **First run is slower.** FinBERT runs on CPU and downloads ~440MB of model weights from the HuggingFace Hub on first launch. 
 
-Scored posts are published to `sentiment.scored`. Aggregates are written every 60 seconds to `data/features/sentiment/`.
+Scored posts are published to (`sentiment.scored`) and written to (`data/silver/sentiment/scored/`). Aggregates are written every 60 seconds to (`data/silver/sentiment/aggregates/`).
 
 **7. Run the Airflow DAGs**
 ```bash

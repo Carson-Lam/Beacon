@@ -20,8 +20,8 @@ from indicators.ta_indicators import sma, rsi, bollinger_bands, macd
 
 KAFKA_BOOTSTRAP = "kafka:29092"
 TOPIC = "market.equities"
-OHLCV_BASE = "/opt/spark-data/ohlcv/equities"
-FEATURES_BASE = "/opt/spark-data/features/equities"
+OHLCV_BASE = "/opt/spark-data/silver/ohlcv/equities"
+FEATURES_BASE = "/opt/spark-data/silver/indicators/equities"
 CHECKPOINT_BASE = "/opt/spark-data/_checkpoints/equities"
 
 MIN_LOOKBACK_BARS = 60  
@@ -36,12 +36,13 @@ schema = StructType([
     StructField("timestamp", TimestampType()),
 ])
 
-spark = (
-    SparkSession.builder.appName("beacon-equities-ohlcv")
-    .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
-    .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
-    .getOrCreate()
-)
+spark = SparkSession.builder.appName("beacon-equities-ohlcv").getOrCreate()
+# spark = (
+#     SparkSession.builder.appName("beacon-equities-ohlcv")
+#     .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+#     .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+#     .getOrCreate()
+# )
 spark.sparkContext.setLogLevel("WARN")
 
 raw = (

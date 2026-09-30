@@ -14,7 +14,9 @@ load_dotenv()
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
 INPUT_TOPICS = ["sentiment.reddit", "sentiment.stocktwits"]
 OUTPUT_TOPIC = "sentiment.scored"
-FEATURES_BASE = "data/features/sentiment"
+SILVER_SENTIMENT = "data/silver/sentiment"
+SCORED_BASE = f"{SILVER_SENTIMENT}/scored"
+AGGREGATES_BASE = f"{SILVER_SENTIMENT}/aggregates"
 CONSUMER_GROUP = "finbert-scorer"
 
 FLUSH_INTERVAL_SECONDS = 60
@@ -48,7 +50,7 @@ producer = KafkaProducer(
 )
 
 rolling_history = {}
-
+scored_buffer = []
 
 def parse_timestamp(ts_str: str) -> datetime:
     try:
@@ -91,6 +93,7 @@ def process_message(topic: str, data: dict):
         "user_sentiment_label": data.get("sentiment_label"),
     }
     producer.send(OUTPUT_TOPIC, value=scored)
+    scored_buffer.append(scored)
     print(f"[SCORED] {ticker} ({source}) -> {finbert_label} "
           f"(pos={scores.get('positive', 0):.2f} "
           f"neg={scores.get('negative', 0):.2f} "
@@ -143,7 +146,7 @@ def flush_aggregates():
         if agg is None:
             continue
         safe_symbol = ticker.replace("/", "-")
-        out_dir = f"{FEATURES_BASE}/symbol={safe_symbol}"
+        out_dir = f"{AGGREGATES_BASE}/symbol={safe_symbol}"
         os.makedirs(out_dir, exist_ok=True)
         fname = f"{out_dir}/aggregates_{now.strftime('%Y%m%dT%H%M%S')}.parquet"
         pd.DataFrame([agg]).to_parquet(fname, engine="pyarrow", index=False)
@@ -151,6 +154,18 @@ def flush_aggregates():
               f"bullish_ratio={agg['bullish_ratio']} "
               f"velocity={agg['velocity_1h_vs_24h_avg']}")
 
+def flush_scored_posts():
+    if not scored_buffer:
+        return
+    now = datetime.now(timezone.utc)
+    df = pd.DataFrame(scored_buffer)
+    df["post_id"] = df["post_id"].astype(str) # unify reddit and stocktwits post IDs as strings
+    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True, format="ISO8601")
+    os.makedirs(SCORED_BASE, exist_ok=True)
+    df.to_parquet(f"{SCORED_BASE}/scored_{now.strftime('%Y%m%dT%H%M%S')}.parquet",
+                  engine="pyarrow", index=False) # Parse ISO8601 timestamps, write to parquet
+    print(f"[SCORED FLUSH] wrote {len(df)} post(s) to {SCORED_BASE}")
+    scored_buffer.clear()
 
 def run():
     print(f"Starting FinBERT scorer, subscribed to: {INPUT_TOPICS}")
@@ -165,6 +180,7 @@ def run():
                     print(f"[ERROR] failed to process message from {msg.topic}: {e}")
 
         if time.time() - last_flush >= FLUSH_INTERVAL_SECONDS:
+            flush_scored_posts()
             flush_aggregates()
             last_flush = time.time()
 
