@@ -40,7 +40,7 @@ bronze = raw.select(
 
 query = (
     bronze.writeStream
-    .format("parquet")  
+    .format("delta")
     .option("path", BRONZE_PATH)
     .option("checkpointLocation", CHECKPOINT)
     .partitionBy("topic", "ingest_date")

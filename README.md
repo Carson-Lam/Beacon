@@ -45,6 +45,7 @@ beacon/
 │   └── reddit/                 # PRAW → sentiment.reddit (inactive)
 ├── spark/                     
 │   ├── consumers/              # Structured Streaming jobs: OHLCV bars + indicators
+│   ├── common/                 # Shared Delta helpers: merge, symbol sanitization
 │   ├── indicators/             # SMA, RSI, Bollinger Bands, MACD
 │   └── Dockerfile
 ├── consumers/                  # Standalone Python consumers
