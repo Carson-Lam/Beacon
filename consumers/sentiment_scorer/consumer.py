@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from kafka import KafkaConsumer, KafkaProducer
 from transformers import pipeline
 
+import pyarrow as pa
 from deltalake import DeltaTable, write_deltalake
 from deltalake.exceptions import TableNotFoundError
 
@@ -150,7 +151,8 @@ def flush_aggregates():
             continue
         row = pd.DataFrame([agg])
         row["computed_at"] = pd.to_datetime(row["computed_at"], utc=True).astype("datetime64[us, UTC]")
-        write_deltalake(AGGREGATES_BASE, row, mode="append", partition_by=["ticker"])
+        write_deltalake(AGGREGATES_BASE, pa.Table.from_pandas(row, preserve_index=False),
+            mode="append", partition_by=["ticker"])
         print(f"[AGGREGATE] {ticker}: mentions_24h={agg['mention_count_24h']} "
               f"bullish_ratio={agg['bullish_ratio']} "
               f"velocity={agg['velocity_1h_vs_24h_avg']}")
@@ -162,13 +164,15 @@ def flush_scored_posts():
     df["post_id"] = df["post_id"].astype(str)
     df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True, format="ISO8601").astype("datetime64[us, UTC]")
 
+    data = pa.Table.from_pandas(df, preserve_index=False)
+
     # Kafka auto-commit is at-least-once so a restart can re-score a post. 
     # MERGE on the post identity keeps one row per (source, post_id, ticker).
     try:
         (
             DeltaTable(SCORED_BASE)
             .merge(
-                source=df,
+                source=data,
                 predicate="t.source = s.source AND t.post_id = s.post_id AND t.ticker = s.ticker",
                 source_alias="s",
                 target_alias="t",
@@ -178,7 +182,7 @@ def flush_scored_posts():
             .execute()
         )
     except TableNotFoundError:
-        write_deltalake(SCORED_BASE, df, partition_by=["ticker"])
+        write_deltalake(SCORED_BASE, data, partition_by=["ticker"])
 
     print(f"[SCORED FLUSH] merged {len(df)} post(s) into {SCORED_BASE}")
     scored_buffer.clear()

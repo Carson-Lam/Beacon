@@ -143,6 +143,7 @@ def compute_indicators_task(**context):
 def write_delta_task(**context):
     import shutil
     import pandas as pd
+    import pyarrow as pa
     from deltalake import DeltaTable
 
     tickers = load_tickers()
@@ -159,7 +160,7 @@ def write_delta_task(**context):
     metrics = (
         DeltaTable(TABLE_PATH)
         .merge(
-            source=source,
+            source=pa.Table.from_pandas(source, preserve_index=False),
             predicate="t.symbol = s.symbol AND t.date = s.date",
             source_alias="s",
             target_alias="t",

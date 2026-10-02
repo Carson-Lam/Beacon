@@ -86,6 +86,7 @@ def compute_indicators_task(**context):
 def write_delta_task(**context):
     import shutil
     import pandas as pd
+    import pyarrow as pa
     from deltalake import write_deltalake
 
     tickers = load_tickers()
@@ -94,7 +95,8 @@ def write_delta_task(**context):
         ignore_index=True,
     )
 
-    write_deltalake(TABLE_PATH, df, mode="overwrite", partition_by=["symbol"])
+    table = pa.Table.from_pandas(df, preserve_index=False)
+    write_deltalake(TABLE_PATH, table, mode="overwrite", partition_by=["symbol"])
     for symbol, n in df.groupby("symbol").size().items():
         print(f"[WRITE] {symbol}: {n} rows")
     print(f"[WRITE] {len(df)} total rows to {TABLE_PATH}")
