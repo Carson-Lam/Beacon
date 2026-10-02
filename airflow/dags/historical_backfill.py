@@ -12,11 +12,12 @@ import time
 from datetime import datetime
 
 from airflow import DAG
-from airflow.operators.python import PythonOperator 
+from airflow.operators.python import PythonOperator
 
 TMP_BASE = "/opt/airflow/data/_tmp/historical"
-FINAL_BASE = "/opt/airflow/data/silver/equities_historical"
+TABLE_PATH = "/opt/airflow/data/silver/equities_historical"
 CONFIG_PATH = "/opt/airflow/config/tickers.yaml"
+
 
 def load_tickers():
     import yaml
@@ -36,11 +37,11 @@ def fetch_history(**context):
         df = yf.download(ticker, period="2y", interval="1d", progress=False)
         df = df.dropna()
 
-        # Flatten multi index columns that yfinances uses for some ETFs
+        # Flatten multi index columns that yfinance uses for some ETFs
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = df.columns.get_level_values(0)
 
-        df = df.reset_index() 
+        df = df.reset_index()
         df.to_parquet(f"{TMP_BASE}/raw/{ticker}.parquet", index=False)
         print(f"[FETCH] {ticker}: {len(df)} daily bars")
         time.sleep(1)  # throttle for rate limits
@@ -63,7 +64,10 @@ def compute_indicators_task(**context):
         macd_line, macd_signal, macd_hist = macd(close, 12, 26, 9)
 
         features = pd.DataFrame({
-            "date": df["Date"],
+            "symbol": ticker,
+            # A trading day, not a timestamp. It is half of the (symbol, date) key that
+            # daily_refresh MERGEs on, so both DAGs must store it the same way.
+            "date": pd.to_datetime(df["Date"]).dt.date,
             "close": close,
             "sma_20": sma(close, 20),
             "sma_50": sma(close, 50),
@@ -79,18 +83,21 @@ def compute_indicators_task(**context):
         print(f"[INDICATORS] {ticker}: computed {len(features)} rows")
 
 
-def write_parquet_task(**context):
+def write_delta_task(**context):
     import shutil
     import pandas as pd
+    from deltalake import write_deltalake
 
     tickers = load_tickers()
+    df = pd.concat(
+        [pd.read_parquet(f"{TMP_BASE}/features/{t}.parquet") for t in tickers],
+        ignore_index=True,
+    )
 
-    for ticker in tickers:
-        df = pd.read_parquet(f"{TMP_BASE}/features/{ticker}.parquet")
-        out_dir = f"{FINAL_BASE}/symbol={ticker}"
-        os.makedirs(out_dir, exist_ok=True)
-        df.to_parquet(f"{out_dir}/data.parquet", index=False)
-        print(f"[WRITE] {ticker}: wrote {len(df)} rows to {out_dir}")
+    write_deltalake(TABLE_PATH, df, mode="overwrite", partition_by=["symbol"])
+    for symbol, n in df.groupby("symbol").size().items():
+        print(f"[WRITE] {symbol}: {n} rows")
+    print(f"[WRITE] {len(df)} total rows to {TABLE_PATH}")
 
     shutil.rmtree(TMP_BASE, ignore_errors=True)
 
@@ -120,9 +127,9 @@ with DAG(
         python_callable=compute_indicators_task,
     )
 
-    write_parquet_op = PythonOperator(
-        task_id="write_parquet",
-        python_callable=write_parquet_task,
+    write_delta_op = PythonOperator(
+        task_id="write_delta",
+        python_callable=write_delta_task,
     )
 
-    fetch_history_task >> compute_indicators_op >> write_parquet_op
+    fetch_history_task >> compute_indicators_op >> write_delta_op

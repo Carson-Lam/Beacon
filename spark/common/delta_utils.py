@@ -2,6 +2,7 @@
 Delta Lake helper functions for the Spark streaming consumers
 """
 
+from __future__ import annotations
 from delta.tables import DeltaTable
 from pyspark.sql import Column, DataFrame, SparkSession
 from pyspark.sql.functions import regexp_replace

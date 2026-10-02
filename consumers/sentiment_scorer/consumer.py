@@ -9,6 +9,9 @@ from dotenv import load_dotenv
 from kafka import KafkaConsumer, KafkaProducer
 from transformers import pipeline
 
+from deltalake import DeltaTable, write_deltalake
+from deltalake.exceptions import TableNotFoundError
+
 load_dotenv()
 
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
@@ -145,11 +148,9 @@ def flush_aggregates():
         agg = compute_aggregates(ticker, now)
         if agg is None:
             continue
-        safe_symbol = ticker.replace("/", "-")
-        out_dir = f"{AGGREGATES_BASE}/symbol={safe_symbol}"
-        os.makedirs(out_dir, exist_ok=True)
-        fname = f"{out_dir}/aggregates_{now.strftime('%Y%m%dT%H%M%S')}.parquet"
-        pd.DataFrame([agg]).to_parquet(fname, engine="pyarrow", index=False)
+        row = pd.DataFrame([agg])
+        row["computed_at"] = pd.to_datetime(row["computed_at"], utc=True).astype("datetime64[us, UTC]")
+        write_deltalake(AGGREGATES_BASE, row, mode="append", partition_by=["ticker"])
         print(f"[AGGREGATE] {ticker}: mentions_24h={agg['mention_count_24h']} "
               f"bullish_ratio={agg['bullish_ratio']} "
               f"velocity={agg['velocity_1h_vs_24h_avg']}")
@@ -157,14 +158,29 @@ def flush_aggregates():
 def flush_scored_posts():
     if not scored_buffer:
         return
-    now = datetime.now(timezone.utc)
     df = pd.DataFrame(scored_buffer)
-    df["post_id"] = df["post_id"].astype(str) # unify reddit and stocktwits post IDs as strings
-    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True, format="ISO8601")
-    os.makedirs(SCORED_BASE, exist_ok=True)
-    df.to_parquet(f"{SCORED_BASE}/scored_{now.strftime('%Y%m%dT%H%M%S')}.parquet",
-                  engine="pyarrow", index=False) # Parse ISO8601 timestamps, write to parquet
-    print(f"[SCORED FLUSH] wrote {len(df)} post(s) to {SCORED_BASE}")
+    df["post_id"] = df["post_id"].astype(str)
+    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True, format="ISO8601").astype("datetime64[us, UTC]")
+
+    # Kafka auto-commit is at-least-once so a restart can re-score a post. 
+    # MERGE on the post identity keeps one row per (source, post_id, ticker).
+    try:
+        (
+            DeltaTable(SCORED_BASE)
+            .merge(
+                source=df,
+                predicate="t.source = s.source AND t.post_id = s.post_id AND t.ticker = s.ticker",
+                source_alias="s",
+                target_alias="t",
+            )
+            .when_matched_update_all()
+            .when_not_matched_insert_all()
+            .execute()
+        )
+    except TableNotFoundError:
+        write_deltalake(SCORED_BASE, df, partition_by=["ticker"])
+
+    print(f"[SCORED FLUSH] merged {len(df)} post(s) into {SCORED_BASE}")
     scored_buffer.clear()
 
 def run():

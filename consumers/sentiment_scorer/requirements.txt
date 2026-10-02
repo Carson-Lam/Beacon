@@ -4,3 +4,4 @@ kafka-python
 python-dotenv
 pandas
 pyarrow
+deltalake

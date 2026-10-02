@@ -6,9 +6,6 @@ recent trading day's OHLCV per tracked equity, validates it, merges it
 into existing history, recomputes indicators over the full series, and
 overwrites the historical feature store.
 
-Assumes that historical_backfill has already populated
-silver/equities_historical/symbol=<TICKER>/data.parquet 
-and merges new info into that file.
 """
 
 import os
@@ -18,7 +15,7 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 
 TMP_BASE = "/opt/airflow/data/_tmp/daily_refresh"
-FINAL_BASE = "/opt/airflow/data/silver/equities_historical"
+TABLE_PATH = "/opt/airflow/data/silver/equities_historical"
 CONFIG_PATH = "/opt/airflow/config/tickers.yaml"
 
 
@@ -96,9 +93,11 @@ def compute_indicators_task(**context):
     sys.path.append("/opt/airflow/shared/spark")
     from indicators.ta_indicators import bollinger_bands, macd, rsi, sma
     import pandas as pd
+    from deltalake import DeltaTable
 
     tickers = load_tickers()
     os.makedirs(f"{TMP_BASE}/features", exist_ok=True)
+    table = DeltaTable(TABLE_PATH)
 
     for ticker in tickers:
         raw_path = f"{TMP_BASE}/raw/{ticker}.parquet"
@@ -107,15 +106,14 @@ def compute_indicators_task(**context):
             continue
 
         new_raw = pd.read_parquet(raw_path)
-        existing = pd.read_parquet(f"{FINAL_BASE}/symbol={ticker}/data.parquet")
-
         new_row = pd.DataFrame({
-            "date": new_raw["Date"],
+            "date": pd.to_datetime(new_raw["Date"]).dt.date,
             "close": new_raw["Close"].astype(float),
         })
+        existing = table.to_pandas(partitions=[("symbol", "=", ticker)], columns=["date", "close"])
 
-        # Merge and de-duplicate on date, don't duplicate rows
-        combined = pd.concat([existing[["date", "close"]], new_row], ignore_index=True)
+        # De-duplicate on date so a re-run of an existing day doesn't double-count it
+        combined = pd.concat([existing, new_row], ignore_index=True)
         combined = combined.drop_duplicates(subset="date", keep="last").sort_values("date").reset_index(drop=True)
 
         close = combined["close"]
@@ -123,6 +121,7 @@ def compute_indicators_task(**context):
         macd_line, macd_signal, macd_hist = macd(close, 12, 26, 9)
 
         features = pd.DataFrame({
+            "symbol": ticker,
             "date": combined["date"],
             "close": close,
             "sma_20": sma(close, 20),
@@ -135,28 +134,42 @@ def compute_indicators_task(**context):
             "macd_signal": macd_signal,
             "macd_hist": macd_hist,
         })
-        features.to_parquet(f"{TMP_BASE}/features/{ticker}.parquet", index=False)
-        print(f"[INDICATORS] {ticker}: recomputed over {len(features)} total rows")
+
+        new_rows = features[features["date"].isin(set(new_row["date"]))]
+        new_rows.to_parquet(f"{TMP_BASE}/features/{ticker}.parquet", index=False)
+        print(f"[INDICATORS] {ticker}: computed over {len(features)} rows, {len(new_rows)} to merge")
 
 
-def write_parquet_task(**context):
+def write_delta_task(**context):
     import shutil
     import pandas as pd
+    from deltalake import DeltaTable
 
     tickers = load_tickers()
+    paths = [f"{TMP_BASE}/features/{t}.parquet" for t in tickers]
+    paths = [p for p in paths if os.path.exists(p)]
 
-    for ticker in tickers:
-        features_path = f"{TMP_BASE}/features/{ticker}.parquet"
-        if not os.path.exists(features_path):
-            print(f"[WRITE] {ticker}: no new data this run, nothing to write")
-            continue
+    if not paths:
+        print("[WRITE] no new data this run (likely a market holiday), nothing to merge")
+        shutil.rmtree(TMP_BASE, ignore_errors=True)
+        return
 
-        df = pd.read_parquet(features_path)
-        out_dir = f"{FINAL_BASE}/symbol={ticker}"
-        os.makedirs(out_dir, exist_ok=True)
+    source = pd.concat([pd.read_parquet(p) for p in paths], ignore_index=True)
 
-        df.to_parquet(f"{out_dir}/data.parquet", index=False)
-        print(f"[WRITE] {ticker}: wrote {len(df)} total rows to {out_dir}")
+    metrics = (
+        DeltaTable(TABLE_PATH)
+        .merge(
+            source=source,
+            predicate="t.symbol = s.symbol AND t.date = s.date",
+            source_alias="s",
+            target_alias="t",
+        )
+        .when_matched_update_all()
+        .when_not_matched_insert_all()
+        .execute()
+    )
+    print(f"[MERGE] inserted={metrics.get('num_target_rows_inserted')} "
+          f"updated={metrics.get('num_target_rows_updated')}")
 
     shutil.rmtree(TMP_BASE, ignore_errors=True)
 
@@ -197,9 +210,9 @@ with DAG(
         python_callable=compute_indicators_task,
     )
 
-    write_parquet_op = PythonOperator(
-        task_id="write_parquet",
-        python_callable=write_parquet_task,
+    write_delta_op = PythonOperator(
+        task_id="write_delta",
+        python_callable=write_delta_task,
     )
 
     notify_slack_op = PythonOperator(
@@ -207,4 +220,4 @@ with DAG(
         python_callable=notify_slack,
     )
 
-    fetch_daily_task >> validate_data_task >> compute_indicators_op >> write_parquet_op >> notify_slack_op
+    fetch_daily_task >> validate_data_task >> compute_indicators_op >> write_delta_op >> notify_slack_op
