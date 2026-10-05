@@ -12,6 +12,7 @@ Nightly (2am ET) cleanup for every Delta table in the lakehouse
 Run this while the streaming writers are stopped to prevent Delta Lake transaction 
 conflicts caused by concurrent access through the Docker bind mount
 """
+import os
 
 from datetime import datetime
 
@@ -37,18 +38,15 @@ VACUUM_RETENTION_HOURS = 7 * 24
 def _for_each_table(label, action):
     """Run action on every existing table and log failures"""
     from deltalake import DeltaTable
-    from deltalake.exceptions import TableNotFoundError
-
+    
     failed = []
     for rel in TABLES:
         path = f"{DATA_ROOT}/{rel}"
-        try:
-            dt = DeltaTable(path)
-        except TableNotFoundError:
+        if not os.path.isdir(f"{path}/_delta_log"):
             print(f"[{label}] {rel}: not created yet, skipping")
             continue
         try:
-            action(rel, path, dt)
+            action(rel, path, DeltaTable(path))
         except Exception as e:
             print(f"[{label}] {rel}: FAILED: {e}")
             failed.append(rel)
