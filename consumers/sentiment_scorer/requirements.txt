@@ -3,5 +3,5 @@ torch
 kafka-python
 python-dotenv
 pandas
-pyarrow
-deltalake==1.6.6
+pyarrow==25.0.1
+deltalake==0.25.5

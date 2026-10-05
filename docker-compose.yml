@@ -27,6 +27,7 @@ services:
   kafka:
       image: confluentinc/cp-kafka:7.6.0
       container_name: beacon-kafka
+      restart: on-failure
       depends_on:
         - zookeeper
       ports:
@@ -145,6 +146,7 @@ services:
   airflow-scheduler:
     build: ./airflow
     container_name: beacon-airflow-scheduler
+    user: "185:0"   # one owner group (0) for the shared lakehouse both spark + airflow
     depends_on:
       - airflow-init
     environment: *airflow-common-env

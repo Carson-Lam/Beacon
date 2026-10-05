@@ -51,7 +51,7 @@ beacon/
 ├── consumers/                  # Standalone Python consumers
 │   └── sentiment_scorer/       # FinBERT scoring: sentiment.scored + aggregates
 ├── airflow/
-│   ├── dags/                   # historical_backfill, daily_refresh
+│   ├── dags/                   # historical_backfill, daily_refresh, lakehouse_maintenance
 │   └── Dockerfile
 ├── config/tickers.yaml         # Tracked equities for the Airflow DAGs
 ├── docs/adr/                   # Architecture Decision Records
@@ -144,6 +144,7 @@ UI accessible at http://localhost:8082 (Login: 'admin' / 'admin'). Trigger `hist
 |---|---|---|
 | `historical_backfill` | `@once` (manual) | 2 years of daily OHLCV per ticker, computes indicators |
 | `daily_refresh` | `0 18 * * 1-5` | Latest trading day, validated, merged into history |
+| `lakehouse_maintenance` | `0 2 * * *` | Compacts small files and removes unreferenced files older than 7 days |
 
 
 ## Architectural Decision Records
