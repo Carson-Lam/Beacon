@@ -56,6 +56,7 @@ beacon/
 ├── config/tickers.yaml         # Tracked equities for the Airflow DAGs
 ├── docs/adr/                   # Architecture Decision Records
 ├── data/                       # Lakehouse (gitignored): bronze/; silver; gold;
+├── dbt/                        # dbt-core + duckDB for delta_scan()
 └── docker-compose.yml
 ```
 

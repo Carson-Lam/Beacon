@@ -1,0 +1,10 @@
+beacon:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      # Relative to dbt/ 
+      path: ../data/warehouse/beacon.duckdb
+      extensions:
+        - delta
+      threads: 4

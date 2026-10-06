@@ -1,0 +1,26 @@
+version: 2
+
+sources:
+  - name: silver
+    description: >
+      Silver-layer Delta tables read in place with DuckDB's delta_scan(). Nothing 
+      copied into the warehouse. Paths are relative to the dbt/ directory.
+    tables:
+      - name: ohlcv_crypto_1min
+        meta: {external_location: "delta_scan('../data/silver/ohlcv/crypto/1min')"}
+      - name: ohlcv_crypto_5min
+        meta: {external_location: "delta_scan('../data/silver/ohlcv/crypto/5min')"}
+      - name: ohlcv_equities_1min
+        meta: {external_location: "delta_scan('../data/silver/ohlcv/equities/1min')"}
+      - name: ohlcv_equities_5min
+        meta: {external_location: "delta_scan('../data/silver/ohlcv/equities/5min')"}
+      - name: indicators_crypto
+        meta: {external_location: "delta_scan('../data/silver/indicators/crypto')"}
+      - name: indicators_equities
+        meta: {external_location: "delta_scan('../data/silver/indicators/equities')"}
+      - name: equities_historical
+        meta: {external_location: "delta_scan('../data/silver/equities_historical')"}
+      - name: sentiment_scored
+        meta: {external_location: "delta_scan('../data/silver/sentiment/scored')"}
+      - name: sentiment_aggregates
+        meta: {external_location: "delta_scan('../data/silver/sentiment/aggregates')"}

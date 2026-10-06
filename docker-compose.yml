@@ -158,5 +158,17 @@ services:
       - ./data:/opt/airflow/data
     command: scheduler
 
+  dbt:
+    build: ./dbt
+    container_name: beacon-dbt
+    user: "185:0"  
+    working_dir: /usr/app/dbt
+    environment:
+      DBT_PROFILES_DIR: /usr/app/dbt
+    volumes:
+      - ./dbt:/usr/app/dbt     # Project
+      - ./data:/usr/app/data   # Delta tables 
+    command: ["tail", "-f", "/dev/null"]  
+
 volumes:
   airflow_pg_data:

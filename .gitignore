@@ -10,3 +10,7 @@ kafka_logs.txt
 data/
 spark/.ivy2/
 scripts/
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+dbt/.user.yml
