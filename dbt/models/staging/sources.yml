@@ -1,5 +1,20 @@
 version: 2
 
+# Freshness profiles to notify when feeds stop
+x-freshness:
+  crypto_stream: &crypto_stream
+    warn_after: {count: 30, period: minute}
+    error_after: {count: 6, period: hour}
+  equities_stream: &equities_stream
+    warn_after: {count: 1, period: day}
+    error_after: {count: 4, period: day}
+  daily_batch: &daily_batch
+    warn_after: {count: 4, period: day}
+    error_after: {count: 7, period: day}
+  sentiment: &sentiment
+    warn_after: {count: 1, period: hour}
+    error_after: {count: 24, period: hour}
+
 sources:
   - name: silver
     description: >
@@ -7,20 +22,64 @@ sources:
       copied into the warehouse. Paths are relative to the dbt/ directory.
     tables:
       - name: ohlcv_crypto_1min
-        meta: {external_location: "delta_scan('../data/silver/ohlcv/crypto/1min')"}
+        meta:
+          delta_path: ../data/silver/ohlcv/crypto/1min
+          external_location: "delta_scan('../data/silver/ohlcv/crypto/1min')"
+        loaded_at_field: window_start
+        freshness: *crypto_stream
+
       - name: ohlcv_crypto_5min
-        meta: {external_location: "delta_scan('../data/silver/ohlcv/crypto/5min')"}
+        meta:
+          delta_path: ../data/silver/ohlcv/crypto/5min
+          external_location: "delta_scan('../data/silver/ohlcv/crypto/5min')"
+        loaded_at_field: window_start
+        freshness: *crypto_stream
+
       - name: ohlcv_equities_1min
-        meta: {external_location: "delta_scan('../data/silver/ohlcv/equities/1min')"}
+        meta:
+          delta_path: ../data/silver/ohlcv/equities/1min
+          external_location: "delta_scan('../data/silver/ohlcv/equities/1min')"
+        loaded_at_field: window_start
+        freshness: *equities_stream
+
       - name: ohlcv_equities_5min
-        meta: {external_location: "delta_scan('../data/silver/ohlcv/equities/5min')"}
+        meta:
+          delta_path: ../data/silver/ohlcv/equities/5min
+          external_location: "delta_scan('../data/silver/ohlcv/equities/5min')"
+        loaded_at_field: window_start
+        freshness: *equities_stream
+
       - name: indicators_crypto
-        meta: {external_location: "delta_scan('../data/silver/indicators/crypto')"}
+        meta:
+          delta_path: ../data/silver/indicators/crypto
+          external_location: "delta_scan('../data/silver/indicators/crypto')"
+        loaded_at_field: window_start
+        freshness: *crypto_stream
+
       - name: indicators_equities
-        meta: {external_location: "delta_scan('../data/silver/indicators/equities')"}
+        meta:
+          delta_path: ../data/silver/indicators/equities
+          external_location: "delta_scan('../data/silver/indicators/equities')"
+        loaded_at_field: window_start
+        freshness: *equities_stream
+
       - name: equities_historical
-        meta: {external_location: "delta_scan('../data/silver/equities_historical')"}
+        meta:
+          delta_path: ../data/silver/equities_historical
+          external_location: "delta_scan('../data/silver/equities_historical')"
+        loaded_at_field: 'cast("date" as timestamp)'
+        freshness: *daily_batch
+
       - name: sentiment_scored
-        meta: {external_location: "delta_scan('../data/silver/sentiment/scored')"}
+        meta:
+          delta_path: ../data/silver/sentiment/scored
+          external_location: "delta_scan('../data/silver/sentiment/scored')"
+        loaded_at_field: '"timestamp"'
+        freshness: *sentiment
+
       - name: sentiment_aggregates
-        meta: {external_location: "delta_scan('../data/silver/sentiment/aggregates')"}
+        meta:
+          delta_path: ../data/silver/sentiment/aggregates
+          external_location: "delta_scan('../data/silver/sentiment/aggregates')"
+        loaded_at_field: computed_at
+        freshness: *sentiment

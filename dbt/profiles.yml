@@ -5,6 +5,9 @@ beacon:
       type: duckdb
       # Relative to dbt/ 
       path: ../data/warehouse/beacon.duckdb
+      external_root: ../data/gold
       extensions:
         - delta
+      settings:
+        TimeZone: UTC  
       threads: 4
