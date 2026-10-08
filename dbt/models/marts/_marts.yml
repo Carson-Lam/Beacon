@@ -1,0 +1,31 @@
+version: 2
+
+models:
+  - name: mart_ticker_snapshot
+    columns:
+      - name: ticker
+        data_tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments: {to: "ref('tickers')", field: ticker}
+      - {name: price, data_tests: [not_null]}
+
+  - name: mart_ticker_history
+    data_tests:
+      - unique_combination:
+          arguments: {columns: [ticker, timeframe, ts]}
+    columns:
+      - name: timeframe
+        data_tests:
+          - accepted_values:
+              arguments: {values: ['1m', '1d']}
+
+  - name: mart_sentiment_daily
+    data_tests:
+      - unique_combination:
+          arguments: {columns: [ticker, day]}
+
+  - name: mart_pipeline_health
+    columns:
+      - {name: source_table, data_tests: [not_null, unique]}

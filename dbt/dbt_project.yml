@@ -4,7 +4,7 @@ config-version: 2
 profile: beacon
 
 model-paths: ["models"]
-seed-paths: ["seeds"]
+seed-paths: ["../config"] 
 test-paths: ["tests"]
 target-path: "target"
 clean-targets: ["target", "dbt_packages"]
@@ -21,3 +21,11 @@ models:
       +materialized: external  
       +format: parquet
       +schema: gold
+
+seeds:
+  beacon:
+    +schema: reference
+    tickers:
+      +column_types:
+        ticker: varchar
+        asset_class: varchar

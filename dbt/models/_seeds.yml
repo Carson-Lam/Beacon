@@ -1,0 +1,13 @@
+version: 2
+
+seeds:
+  - name: tickers
+    description: Tracked tickers. Single source of truth shared with the Airflow DAGs.
+    columns:
+      - name: ticker
+        data_tests: [not_null, unique]
+      - name: asset_class
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments: {values: [equity, crypto]}

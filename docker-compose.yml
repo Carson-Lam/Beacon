@@ -168,6 +168,7 @@ services:
     volumes:
       - ./dbt:/usr/app/dbt     # Project
       - ./data:/usr/app/data   # Delta tables 
+      - ./config:/usr/app/config:ro
     command: ["tail", "-f", "/dev/null"]  
 
 volumes:

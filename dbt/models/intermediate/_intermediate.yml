@@ -1,0 +1,12 @@
+version: 2
+
+models:
+  - name: int_ticker_daily
+    data_tests:
+      - unique_combination:
+          arguments: {columns: [ticker, trade_date]}
+
+  - name: int_ticker_intraday
+    data_tests:
+      - unique_combination:
+          arguments: {columns: [ticker, bar_start]}

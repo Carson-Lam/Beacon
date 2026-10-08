@@ -1,0 +1,73 @@
+version: 2
+
+models:
+  - name: stg_ohlcv_1min
+    data_tests:
+      - unique_combination:
+          arguments: {columns: [symbol, bar_start]}
+    columns:
+      - {name: ticker, data_tests: [not_null]}
+      - {name: bar_start, data_tests: [not_null]}
+      - name: asset_class
+        data_tests:
+          - accepted_values:
+              arguments: {values: [equity, crypto]}
+
+  - name: stg_ohlcv_5min
+    data_tests:
+      - unique_combination:
+          arguments: {columns: [symbol, bar_start]}
+    columns:
+      - {name: ticker, data_tests: [not_null]}
+      - {name: bar_start, data_tests: [not_null]}
+
+  - name: stg_indicators
+    data_tests:
+      - unique_combination:
+          arguments: {columns: [symbol, bar_start]}
+    columns:
+      - {name: ticker, data_tests: [not_null]}
+      - {name: bar_start, data_tests: [not_null]}
+
+  - name: stg_equities_historical
+    data_tests:
+      - unique_combination:
+          arguments: {columns: [ticker, trade_date]}
+    columns:
+      - {name: ticker, data_tests: [not_null]}
+      - {name: trade_date, data_tests: [not_null]}
+      - {name: close, data_tests: [not_null]}
+
+  - name: stg_sentiment_scored
+    data_tests:
+      - unique_combination:
+          arguments: {columns: [source, post_id, ticker]}
+    columns:
+      - name: ticker
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: "ref('tickers')", field: ticker}
+      - {name: post_id, data_tests: [not_null]}
+      - {name: posted_at, data_tests: [not_null]}
+      - name: finbert_label
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments: {values: [positive, negative, neutral]}
+      - name: user_sentiment_label
+        data_tests:
+          - accepted_values:
+              arguments: {values: [bullish, bearish]}   # nulls (untagged posts) allowed
+
+  - name: stg_sentiment_aggregates
+    data_tests:
+      - unique_combination:
+          arguments: {columns: [ticker, computed_at]}
+    columns:
+      - name: ticker
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: "ref('tickers')", field: ticker}
+      - {name: computed_at, data_tests: [not_null]}

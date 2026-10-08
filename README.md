@@ -53,7 +53,7 @@ beacon/
 ├── airflow/
 │   ├── dags/                   # historical_backfill, daily_refresh, lakehouse_maintenance
 │   └── Dockerfile
-├── config/tickers.yaml         # Tracked equities for the Airflow DAGs
+├── config/tickers.csv          # Tracked equities for Airflow, dbt seeds
 ├── docs/adr/                   # Architecture Decision Records
 ├── data/                       # Lakehouse (gitignored): bronze/; silver; gold;
 ├── dbt/                        # dbt-core + duckDB for delta_scan()

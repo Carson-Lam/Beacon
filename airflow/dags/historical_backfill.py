@@ -16,14 +16,12 @@ from airflow.operators.python import PythonOperator
 
 TMP_BASE = "/opt/airflow/data/_tmp/historical"
 TABLE_PATH = "/opt/airflow/data/silver/equities_historical"
-CONFIG_PATH = "/opt/airflow/config/tickers.yaml"
-
+CONFIG_PATH = "/opt/airflow/config/tickers.csv"
 
 def load_tickers():
-    import yaml
-    with open(CONFIG_PATH) as f:
-        cfg = yaml.safe_load(f)
-    return cfg["equities"]
+    import csv
+    with open(CONFIG_PATH, newline="") as f:
+        return [row["ticker"] for row in csv.DictReader(f) if row["asset_class"] == "equity"]
 
 
 def fetch_history(**context):
