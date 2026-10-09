@@ -2,30 +2,102 @@ version: 2
 
 models:
   - name: mart_ticker_snapshot
+    description: >
+      One row per tracked ticker. Latest price, latest indicator set, change vs. previous
+      close, and latest sentiment aggregate. Read by the Watchlist screen. Price comes from
+      the newer of the latest streamed 1-min bar and the latest daily close.
     columns:
       - name: ticker
+        description: "{{ doc('ticker') }}"
         data_tests:
           - not_null
           - unique
           - relationships:
               arguments: {to: "ref('tickers')", field: ticker}
-      - {name: price, data_tests: [not_null]}
+      - {name: asset_class, description: "{{ doc('asset_class') }}"}
+      - name: price
+        description: Latest price (close of the chosen bar).
+        data_tests: [not_null]
+      - {name: price_as_of, description: "Start of the 1-min bar, or the trade date at 00:00 UTC for a daily close."}
+      - {name: indicators_timeframe, description: "'1m' if price and indicators come from the stream, '1d' if from the daily series."}
+      - {name: ref_close, description: "Close the change is measured against: the latest daily close for a streamed price, the prior daily close for a daily price. Null for crypto."}
+      - {name: change_abs, description: Price minus ref_close.}
+      - {name: change_pct, description: "price / ref_close − 1 (0.012 = +1.2%)."}
+      - {name: sma_20, description: "{{ doc('sma_20') }}"}
+      - {name: sma_50, description: "{{ doc('sma_50') }}"}
+      - {name: rsi_14, description: "{{ doc('rsi_14') }}"}
+      - {name: bb_upper, description: "{{ doc('bb_upper') }}"}
+      - {name: bb_middle, description: "{{ doc('bb_middle') }}"}
+      - {name: bb_lower, description: "{{ doc('bb_lower') }}"}
+      - {name: macd, description: "{{ doc('macd') }}"}
+      - {name: macd_signal, description: "{{ doc('macd_signal') }}"}
+      - {name: macd_hist, description: "{{ doc('macd_hist') }}"}
+      - {name: mention_count_24h, description: Scored social posts mentioning the ticker in the trailing 24 hours. Null for tickers without sentiment coverage.}
+      - {name: bullish_ratio, description: "FinBERT positive / (positive + negative) over the trailing 24 hours. Null when no post is positive or negative."}
+      - {name: velocity_1h_vs_24h, description: Mentions in the last hour divided by the average hourly rate over 24 hours. Above 1 means attention is rising.}
+      - {name: sentiment_as_of, description: When the sentiment aggregate was computed.}
 
   - name: mart_ticker_history
+    description: >
+      Chart series for the Ticker Detail screen. timeframe '1m' holds streamed bars with
+      OHLC and intraday indicators; '1d' holds daily closes with daily indicators (OHLC
+      null; the daily pipeline stores close only).
     data_tests:
       - unique_combination:
           arguments: {columns: [ticker, timeframe, ts]}
     columns:
+      - {name: ticker, description: "{{ doc('ticker') }}"}
+      - {name: asset_class, description: "{{ doc('asset_class') }}"}
       - name: timeframe
+        description: "'1m' (streamed bars) or '1d' (daily closes)."
         data_tests:
           - accepted_values:
               arguments: {values: ['1m', '1d']}
+      - {name: ts, description: "Bar start (1m) or trade date at 00:00 UTC (1d)."}
+      - {name: open, description: Bar open. Null for 1d.}
+      - {name: high, description: Bar high. Null for 1d.}
+      - {name: low, description: Bar low. Null for 1d.}
+      - {name: close, description: Bar close (1m) or daily close (1d).}
+      - {name: volume, description: Traded volume in the bar. Null for 1d.}
+      - {name: sma_20, description: "{{ doc('sma_20') }}"}
+      - {name: sma_50, description: "{{ doc('sma_50') }}"}
+      - {name: rsi_14, description: "{{ doc('rsi_14') }}"}
+      - {name: bb_upper, description: "{{ doc('bb_upper') }}"}
+      - {name: bb_middle, description: "{{ doc('bb_middle') }}"}
+      - {name: bb_lower, description: "{{ doc('bb_lower') }}"}
+      - {name: macd, description: "{{ doc('macd') }}"}
+      - {name: macd_signal, description: "{{ doc('macd_signal') }}"}
+      - {name: macd_hist, description: "{{ doc('macd_hist') }}"}
 
   - name: mart_sentiment_daily
+    description: >
+      Per-ticker daily sentiment from individual scored posts (UTC calendar days). Pairs
+      FinBERT's reading with StockTwits users' own tags for comparison (ADR-003).
     data_tests:
       - unique_combination:
           arguments: {columns: [ticker, day]}
+    columns:
+      - {name: ticker, description: "{{ doc('ticker') }}"}
+      - {name: day, description: UTC calendar day the posts were made.}
+      - {name: mention_count, description: Scored posts mentioning the ticker that day.}
+      - {name: positive_count, description: Posts FinBERT labelled positive.}
+      - {name: negative_count, description: Posts FinBERT labelled negative.}
+      - {name: neutral_count, description: Posts FinBERT labelled neutral.}
+      - {name: bullish_ratio, description: "FinBERT positive / (positive + negative). Null if neither."}
+      - {name: user_bullish_ratio, description: "StockTwits users' self-tagged bullish / (bullish + bearish). Null if no tagged posts."}
+      - {name: velocity_vs_7d_avg, description: "That day's mentions divided by the average over the previous 7 calendar days that had posts. Null with no prior history."}
 
   - name: mart_pipeline_health
+    description: >
+      One row per silver source table: whether it exists, row count, and latest timestamp.
+      Read by the Pipeline Health screen. Missing tables (e.g. equities streams before a
+      market-hours run) appear with table_exists = false.
     columns:
-      - {name: source_table, data_tests: [not_null, unique]}
+      - name: source_table
+        description: Silver source name, as declared in sources.yml.
+        data_tests: [not_null, unique]
+      - {name: table_exists, description: Whether the Delta table exists on disk.}
+      - {name: row_count, description: Rows in the table (0 if missing).}
+      - {name: latest_at, description: Most recent bar, post, aggregate or trade date in the table.}
+      - {name: minutes_since_latest, description: Minutes between latest_at and checked_at.}
+      - {name: checked_at, description: When this mart was built.}

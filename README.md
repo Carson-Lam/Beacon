@@ -12,8 +12,14 @@ Beacon is a real-time financial market intelligence platform that ingests live m
 
 
 ## Data Architecture
+<details>
+<summary>Architecture graph</summary>
 
 ![Beacon architecture](docs/diagrams/Beacon-architecture.png)
+
+</details>
+
+<br>
 
 **Current stack:**
 - **Ingestion:** Alpaca Markets WebSocket (equities + crypto), StockTwits REST polling → Apache Kafka
@@ -26,6 +32,14 @@ Beacon is a real-time financial market intelligence platform that ingests live m
 
 ## Data Storage
 
+<details>
+<summary>dbt lineage graph </summary>
+
+![dbt lineage](docs/diagrams/dbt-lineage.png)
+</details>
+
+<br>
+
 Beacon uses a medallion layout under `data/`. Each layer has one job and one set of readers.
 
 | Layer | Contents | Written by | Read by |
@@ -33,6 +47,18 @@ Beacon uses a medallion layout under `data/`. Each layer has one job and one set
 | **Bronze** `data/bronze/kafka/` | Raw market messages | `bronze_consumer` (Spark) | Replay and debugging, rebuilding silver |
 | **Silver** `data/silver/` | OHLCV bars, indicators, daily equity history, scored posts, sentiment aggregates | Spark consumers, Airflow DAGs, FinBERT scorer | dbt staging models |
 | **Gold** `data/gold/` | dbt marts | dbt | Dashboard, feature store, MCP server |
+
+dbt reads the silver Delta tables in place (DuckDB `delta_scan()`), builds staging and
+intermediate views, and writes the gold marts as Parquet to `data/gold/`. To generate lineage
+docs, run
+```bash
+docker exec beacon-dbt dbt docs generate --static
+```
+then open
+```bash
+dbt/target/static_index.html
+```
+
 
 ## Project Structure
 
