@@ -156,6 +156,7 @@ services:
       - ./spark:/opt/airflow/shared/spark:ro
       - ./config:/opt/airflow/config:ro
       - ./data:/opt/airflow/data
+      - ./dbt:/opt/airflow/dbt 
     command: scheduler
 
   dbt:

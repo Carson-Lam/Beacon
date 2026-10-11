@@ -172,6 +172,7 @@ UI accessible at http://localhost:8082 (Login: 'admin' / 'admin'). Trigger `hist
 | `historical_backfill` | `@once` (manual) | 2 years of daily OHLCV per ticker, computes indicators |
 | `daily_refresh` | `0 18 * * 1-5` | Latest trading day, validated, merged into history |
 | `lakehouse_maintenance` | `0 2 * * *` | Compacts small files and removes unreferenced files older than 7 days |
+| `dbt_transform` | `0 19 * * 1-5` | Waits for `daily_refresh`, then `dbt build` (models + tests) and regenerates docs |
 
 
 ## Architectural Decision Records
