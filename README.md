@@ -109,31 +109,26 @@ docker compose up -d
 
 **4. Run a producer**
 ```bash
-# Crypto (24/7)
-pip install -r producers/crypto/requirements.txt
-python producers/crypto/producer.py
-
-# Equities (market hours only)
-pip install -r producers/equities/requirements.txt
-python producers/equities/producer.py
-```
-
-**5. Run the Spark streaming consumer**
-```bash
 docker compose up -d spark-master spark-worker
 
 # Bronze data lakehouse
 docker exec -it beacon-spark-master /opt/spark/bin/spark-submit \
+  --master spark://spark-master:7077 \
+  --total-executor-cores 1 --executor-memory 512m \
   --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1,io.delta:delta-spark_2.12:3.2.0 \
   /opt/spark-apps/consumers/bronze_consumer.py
 
 # Crypto (24/7)
-docker exec -it beacon-spark-master spark-submit \
+docker exec -it beacon-spark-master /opt/spark/bin/spark-submit \
+  --master spark://spark-master:7077 \
+  --total-executor-cores 1 --executor-memory 1g \
   --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1,io.delta:delta-spark_2.12:3.2.0 \
   /opt/spark-apps/consumers/crypto_consumer.py
 
 # Equities (market hours only)
-docker exec -it beacon-spark-master spark-submit \
+docker exec -it beacon-spark-master /opt/spark/bin/spark-submit \
+  --master spark://spark-master:7077 \
+  --total-executor-cores 1 --executor-memory 1g \
   --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1,io.delta:delta-spark_2.12:3.2.0 \
   /opt/spark-apps/consumers/equities_consumer.py
 ```
