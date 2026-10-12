@@ -5,6 +5,7 @@ Payload kept as raw JSON string. Kafka metadata makaes every row traceable to or
 
 """
 
+
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, to_date
 
