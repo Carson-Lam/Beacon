@@ -9,7 +9,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, to_date
 
 KAFKA_BOOTSTRAP = "kafka:29092"
-TOPICS = "market.equities,market.crypto,sentiment.reddit,sentiment.stocktwits"
+TOPICS = "market.equities,market.crypto,sentiment.stocktwits"
 BRONZE_PATH = "/opt/spark-data/bronze/kafka"
 CHECKPOINT = "/opt/spark-data/_checkpoints/bronze"
 

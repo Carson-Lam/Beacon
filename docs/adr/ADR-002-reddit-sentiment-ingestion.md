@@ -37,3 +37,7 @@ stage. Reddit is the first source; StockTwits follows the same pattern next.
   `sentiment.reddit` (added in this change).
 - The StockTwits producer (next step) should follow the same
   one-topic-per-source and case-sensitive-ticker conventions.
+
+## Update (2026-10-12)
+
+`sentiment.raw` and `sentiment.reddit` removed from `kafka-init`.

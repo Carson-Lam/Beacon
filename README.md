@@ -23,7 +23,7 @@ Beacon is a real-time financial market intelligence platform that ingests live m
 
 **Current stack:**
 - **Ingestion:** Alpaca Markets WebSocket (equities + crypto), StockTwits REST polling → Apache Kafka
-- **Topics:** `market.equities`, `market.crypto`, `sentiment.reddit`, `sentiment.stocktwits`, `sentiment.scored` 
+- **Topics:** `market.equities`, `market.crypto`, `sentiment.stocktwits`, `sentiment.scored` (1 partition each)
 - **Processing:** PySpark Structured Streaming, FinBERT sentiment scoring
 - **Orchestration:** Apache Airflow 
 - **Storage:** Parquet (local); dbt + Delta Lake + DuckDB + Snowflake *(Phase 3)*

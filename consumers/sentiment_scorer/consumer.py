@@ -16,7 +16,7 @@ from deltalake.exceptions import TableNotFoundError
 load_dotenv()
 
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
-INPUT_TOPICS = ["sentiment.reddit", "sentiment.stocktwits"]
+INPUT_TOPICS = ["sentiment.stocktwits"] # sentiment.reddit frozen because access rejected 
 OUTPUT_TOPIC = "sentiment.scored"
 SILVER_SENTIMENT = "data/silver/sentiment"
 SCORED_BASE = f"{SILVER_SENTIMENT}/scored"
