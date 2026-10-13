@@ -7,24 +7,42 @@ on:
     branches: [main]
 
 jobs:
-  lint-and-test:
-    runs-on: ubuntu-latest # Ubuntu VM
-
+  lint:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.12"
+      - run: pip install flake8
+      - run: flake8 --count
 
-      - name: Install dependencies
-        run: |
-          pip install flake8
-          pip install pytest
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/setup-java@v4   # PySpark JVM for tests/test_bars.py
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pytest -v --cov=spark --cov-report=term-missing
 
-      - name: Lint
-        run: flake8 . --count --max-line-length=120 --exclude=.venv,__pycache__
-
-      - name: Test (placeholder)
-        run: pytest --collect-only || true
+  dbt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r dbt/requirements.txt deltalake==0.25.5 pandas
+      - name: Build fixture Delta tables
+        run: python dbt/ci/build_fixture.py
+      - name: dbt build (seeds, models, generic + singular tests)
+        working-directory: dbt
+        run: dbt build --profiles-dir .

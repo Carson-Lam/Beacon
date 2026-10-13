@@ -1,0 +1,4 @@
+[flake8]
+select = E9,F
+exclude = .git,.venv,venv,__pycache__,data,dbt/target,dbt/dbt_packages,dbt/logs,airflow/logs
+# no need to gate formatting checks

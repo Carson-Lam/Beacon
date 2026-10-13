@@ -22,6 +22,10 @@ Canonical ticker shared across market and sentiment data.
 Upper Bollinger Band: 20-period SMA + 2 population standard deviations.
 {% enddocs %}
 
+{% docs bb_middle %}
+Middle Bollinger Band: the 20-period SMA.
+{% enddocs %}
+
 {% docs bb_lower %}
 Lower Bollinger Band: 20-period SMA minus 2 population standard deviations.
 {% enddocs %}

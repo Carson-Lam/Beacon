@@ -18,7 +18,6 @@ from datetime import timedelta
 import pandas as pd
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, from_json, to_date
-from pyspark.sql.types import StructType, StructField, StringType, DoubleType, TimestampType
 
 from common.delta_utils import recent_bars, sanitize_symbol, upsert
 from common.bars import MARKET_SCHEMA, ohlcv_bars
