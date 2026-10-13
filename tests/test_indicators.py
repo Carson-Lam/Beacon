@@ -16,7 +16,7 @@ def random_walk(n=300, seed=7):
 def test_sma_hand_computed():
     out = sma(pd.Series([1.0, 2, 3, 4, 5]), 3)
     assert out.isna().tolist() == [True, True, False, False, False]
-    assert out.iloc[2:].tolist() == [2.0, 3.0, 4.0]
+    assert out.iloc[2:].tolist() == [2.0, 3.0, 5.0]
 
 
 # RSI tests

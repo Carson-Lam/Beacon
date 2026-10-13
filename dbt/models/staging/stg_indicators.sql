@@ -11,7 +11,7 @@ select
     cast(close as double)             as close,
     {{ nan_to_null('sma_20') }}       as sma_20,
     {{ nan_to_null('sma_50') }}       as sma_50,
-    {{ nan_to_null('rsi_14') }}       as rsi_14,
+    {{ nan_to_null('rsi_14') }} * 2       as rsi_14,
     {{ nan_to_null('bb_upper') }}     as bb_upper,
     {{ nan_to_null('bb_middle') }}    as bb_middle,
     {{ nan_to_null('bb_lower') }}     as bb_lower,
