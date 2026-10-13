@@ -1,0 +1,7 @@
+[flake8]
+max-line-length = 120
+exclude = .git,.venv,venv,__pycache__,data,dbt/target,dbt/dbt_packages,dbt/logs,airflow/logs
+per-file-ignores =
+    # put /opt/spark-apps on sys.path before importing project modules
+    spark/consumers/*.py: E402
+    spark/checks/*.py: E402

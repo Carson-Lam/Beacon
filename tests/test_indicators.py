@@ -20,7 +20,6 @@ def test_sma_hand_computed():
 
 
 # RSI tests
-
 def test_rsi_all_gains_is_100():
     assert (rsi(pd.Series(np.arange(1.0, 40.0)), 14).dropna() == 100).all()
 
@@ -62,7 +61,6 @@ def test_bollinger_uses_population_std():
 
 
 # MACD tests
-
 def test_macd_hand_computed():
     line, signal, hist = macd(pd.Series([1.0, 2, 3, 4]), fast=2, slow=3, signal=2)
     assert line.isna().tolist() == [True, True, False, False]
@@ -87,7 +85,6 @@ def test_short_input_is_all_nan(name, fn):
 
 
 # indicator_frame tests
-
 def test_indicator_frame_columns_and_index():
     s = random_walk(80)
     s.index = range(100, 180)  # non-default index must be preserved

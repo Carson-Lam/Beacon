@@ -1,6 +1,6 @@
 # Beacon 
 ### Real-Time Financial Market Intelligence Platform
-
+![CI](https://github.com/Carson-Lam/Beacon/actions/workflows/ci.yml/badge.svg)
 ![Python](https://img.shields.io/badge/Python-3.13-blue)
 ![Kafka](https://img.shields.io/badge/Apache%20Kafka-7.6.0-black)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED)
@@ -182,6 +182,20 @@ UI accessible at http://localhost:8082 (Login: 'admin' / 'admin'). Trigger `hist
 | `daily_refresh` | `0 18 * * 1-5` | Latest trading day, validated, merged into history |
 | `lakehouse_maintenance` | `0 2 * * *` | Compacts small files and removes unreferenced files older than 7 days |
 | `dbt_transform` | `0 19 * * 1-5` | Waits for `daily_refresh`, then `dbt build` (models + tests) and regenerates docs |
+
+## Testing
+
+```bash
+pip install -r requirements-dev.txt
+flake8
+python -m pytest
+```
+CI (`.github/workflows/ci.yml`) runs three required checks on every push and PR: 
+- `lint` (flake8)
+- `test` (pytest with
+coverage)
+- `dbt` (`dbt build` against fixture Delta tables)
+
 
 
 ## Architectural Decision Records

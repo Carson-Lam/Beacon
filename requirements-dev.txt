@@ -1,4 +1,7 @@
 pytest
+pytest-cov
+flake8
 numpy
 pandas
 pandas-ta
+pyspark==3.5.1  # match apache/spark:3.5.1 
