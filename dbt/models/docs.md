@@ -19,25 +19,21 @@ Canonical ticker shared across market and sentiment data.
 {% enddocs %}
 
 {% docs bb_upper %}
-Upper Bollinger Band: 20-period SMA + 2 standard deviations.
-{% enddocs %}
-
-{% docs bb_middle %}
-Middle Bollinger Band: the 20-period SMA.
+Upper Bollinger Band: 20-period SMA + 2 population standard deviations.
 {% enddocs %}
 
 {% docs bb_lower %}
-Lower Bollinger Band: 20-period SMA w 2 standard deviations.
+Lower Bollinger Band: 20-period SMA minus 2 population standard deviations.
 {% enddocs %}
 
 {% docs macd %}
-MACD line: 12-period EMA w 26-period EMA of close.
+MACD line: 12-period EMA minus 26-period EMA of close. Null until 26 periods of history exist.
 {% enddocs %}
 
 {% docs macd_signal %}
-MACD signal line: 9-period EMA of the MACD line.
+MACD signal line: 9-period EMA of the MACD line. Null until 34 periods of history exist.
 {% enddocs %}
 
 {% docs macd_hist %}
-MACD histogram: MACD line w signal line. Sign changes mark crossovers.
+MACD histogram: MACD line minus signal lines
 {% enddocs %}

@@ -32,11 +32,10 @@ def rsi(close: pd.Series, period: int = 14) -> pd.Series:
 def bollinger_bands(close: pd.Series, period: int = 20, num_std: float = 2.0):
     """Middle = SMA(period), bands = +/- num_std * rolling stdev."""
     middle = close.rolling(window=period, min_periods=period).mean()
-    std = close.rolling(window=period, min_periods=period).std()
+    std = close.rolling(window=period, min_periods=period).std(ddof=0)
     upper = middle + num_std * std
     lower = middle - num_std * std
     return upper, middle, lower
-
 
 def macd(close: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9):
     """
@@ -44,10 +43,10 @@ def macd(close: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9):
     Signal line = EMA of the MACD line
     Histogram = MACD line - signal line
     """
-    ema_fast = close.ewm(span=fast, adjust=False).mean()
-    ema_slow = close.ewm(span=slow, adjust=False).mean()
+    ema_fast = close.ewm(span=fast, adjust=False, min_periods=slow).mean()
+    ema_slow = close.ewm(span=slow, adjust=False, min_periods=slow).mean()
     macd_line = ema_fast - ema_slow
-    signal_line = macd_line.ewm(span=signal, adjust=False).mean()
+    signal_line = macd_line.ewm(span=signal, adjust=False, min_periods=signal).mean()
     hist = macd_line - signal_line
     return macd_line, signal_line, hist
 
