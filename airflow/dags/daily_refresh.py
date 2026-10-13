@@ -2,9 +2,10 @@
 daily_refresh
 
 Recurring weekday DAG (6pm ET) that pulls the most 
-recent trading day's OHLCV per tracked equity, validates it, merges it
-into existing history, recomputes indicators over the full series, and
-overwrites the historical feature store.
+recent trading day's OHLCV per tracked equity, validates it, merges it,  
+recomputes indicators over the full series, MERGES into into silver/equities_historical
+
+This DAG is a daily record of features for the ML model
 
 """
 
@@ -16,9 +17,6 @@ from airflow.operators.python import PythonOperator
 
 TMP_BASE = "/opt/airflow/data/_tmp/daily_refresh"
 TABLE_PATH = "/opt/airflow/data/silver/equities_historical"
-CONFIG_PATH = "/opt/airflow/config/tickers.csv"
-
-
 CONFIG_PATH = "/opt/airflow/config/tickers.csv"
 
 def load_tickers():
@@ -35,7 +33,7 @@ def fetch_daily(**context):
     # context["ds"] is Airflow's *logical date* for this run 
     # for a daily DAG, this is the start of the scheduled interval
     # so 6pm yesterday, this is typically yesterday's date
-    target_date = context["ds"] # testing date "2026-09-25"
+    target_date = context["data_interval_end"].in_timezone("America/New_York").strftime("%Y-%m-%d")
     end_date = (datetime.strptime(target_date, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
 
     os.makedirs(f"{TMP_BASE}/raw", exist_ok=True)
@@ -62,30 +60,29 @@ def fetch_daily(**context):
 
 def validate_data(**context):
     import pandas as pd
+    from deltalake import DeltaTable
+    from validation import validate_bars
 
-    tickers = load_tickers()
-    required_cols = ["Open", "High", "Low", "Close", "Volume"]
+    table = DeltaTable(TABLE_PATH)
 
-    for ticker in tickers:
+    for ticker in load_tickers():
         raw_path = f"{TMP_BASE}/raw/{ticker}.parquet"
-
         if not os.path.exists(raw_path):
             # yfinance returns no rows for non trading days
-            # log and skip non trading days
             print(f"[VALIDATE] {ticker}: no file (likely a market holiday), skipping")
             continue
 
         df = pd.read_parquet(raw_path)
+        first_date = pd.to_datetime(df["Date"]).dt.date.min()
 
-        missing = [c for c in required_cols if c not in df.columns]
-        if missing:
-            raise ValueError(f"{ticker}: missing expected columns {missing}")
+        # Stored close immediately before this pull
+        # none for new tickers
+        history = table.to_pandas(partitions=[("symbol", "=", ticker)], columns=["date", "close"])
+        prior = history[history["date"] < first_date].sort_values("date")
+        prior_close = float(prior["close"].iloc[-1]) if not prior.empty else None
 
-        nulls = df[required_cols].isnull().sum().sum()
-        if nulls > 0:
-            raise ValueError(f"{ticker}: {nulls} null values in OHLCV columns")
-
-        print(f"[VALIDATE] {ticker}: {len(df)} row(s), no nulls, OK")
+        validate_bars(ticker, df, prior_close)
+        print(f"[VALIDATE] {ticker}: {len(df)} row(s) OK (prior close {prior_close})")
 
 
 def compute_indicators_task(**context):
