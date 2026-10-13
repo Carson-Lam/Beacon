@@ -182,6 +182,7 @@ UI accessible at http://localhost:8082 (Login: 'admin' / 'admin'). Trigger `hist
 | `daily_refresh` | `0 18 * * 1-5` | Latest trading day, validated, merged into history |
 | `lakehouse_maintenance` | `0 2 * * *` | Compacts small files and removes unreferenced files older than 7 days |
 | `dbt_transform` | `0 19 * * 1-5` | Waits for `daily_refresh`, then `dbt build` (models + tests) and regenerates docs |
+| `daily_refresh` | `0 18 * * 1-5` | EOD reconciliation. The day that just closed validated against stored history|
 
 ## Testing
 
