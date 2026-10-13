@@ -17,12 +17,11 @@ from datetime import timedelta
 
 import pandas as pd
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import (
-    col, from_json, to_date, window, max_by, min_by, max as spark_max, min as spark_min, sum as spark_sum,
-)
+from pyspark.sql.functions import col, from_json, to_date
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, TimestampType
 
 from common.delta_utils import recent_bars, sanitize_symbol, upsert
+from common.bars import MARKET_SCHEMA, ohlcv_bars
 from indicators.ta_indicators import indicator_frame
 
 if len(sys.argv) != 2 or sys.argv[1] not in ("crypto", "equities"):
@@ -39,16 +38,6 @@ LOOKBACK_DAYS = 7
 HISTORY_BARS = 200   # well past SMA-50 and MACD warm-up
 PARTITION_COLS = ["symbol", "window_date"]
 MERGE_KEYS = ["symbol", "window_date", "window_start"]
-
-schema = StructType([
-    StructField("type", StringType()),
-    StructField("symbol", StringType()),
-    StructField("price", DoubleType()),
-    StructField("size", DoubleType()),
-    StructField("bid", DoubleType()),
-    StructField("ask", DoubleType()),
-    StructField("timestamp", TimestampType()),
-])
 
 spark = (
     SparkSession.builder.appName(f"beacon-{ASSET}-ohlcv")
@@ -69,34 +58,12 @@ raw = (
 
 parsed = (
     raw.selectExpr("CAST(value AS STRING) as json_str")
-    .select(from_json(col("json_str"), schema).alias("data"))
+    .select(from_json(col("json_str"), MARKET_SCHEMA).alias("data"))
     .select("data.*")
     .filter(col("type") == "trade")
     .withColumn("symbol", sanitize_symbol(col("symbol")))
     .withWatermark("timestamp", "30 seconds")
 )
-
-
-def make_ohlcv(window_duration: str):
-    # open/close by event time, not arrival order: first()/last() are nondeterministic in an aggregation
-    return (
-        parsed.groupBy(window(col("timestamp"), window_duration), col("symbol"))
-        .agg(
-            min_by("price", "timestamp").alias("open"),
-            spark_max("price").alias("high"),
-            spark_min("price").alias("low"),
-            max_by("price", "timestamp").alias("close"),
-            spark_sum("size").alias("volume"),
-        )
-        .select(
-            col("symbol"),
-            col("window.start").alias("window_start"),
-            col("window.end").alias("window_end"),
-            to_date(col("window.start")).alias("window_date"),
-            "open", "high", "low", "close", "volume",
-        )
-    )
-
 
 def process_1min_batch(batch_df, batch_id):
     batch_df.persist() 
@@ -138,7 +105,7 @@ def process_1min_batch(batch_df, batch_id):
 
 
 query_1min = (
-    make_ohlcv("1 minute").writeStream
+    ohlcv_bars(parsed, "1 minute").writeStream
     .foreachBatch(process_1min_batch)
     .option("checkpointLocation", f"{CHECKPOINT_BASE}/1min")
     .trigger(processingTime="30 seconds")
@@ -146,7 +113,7 @@ query_1min = (
 )
 
 query_5min = (
-    make_ohlcv("5 minutes").writeStream
+    ohlcv_bars(parsed, "5 minutes").writeStream
     .format("delta")
     .partitionBy(*PARTITION_COLS)
     .option("path", f"{OHLCV_BASE}/5min")
