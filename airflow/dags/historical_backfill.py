@@ -2,8 +2,8 @@
 historical_backfill
 
 One-time DAG that pulls 2 years of daily OHLCV per tracked equity via
-yfinance, computes the sameindicators the streaming consumer computes
-live, and writes partitioned Parquet to silver/equities_historical/.
+yfinance, computes the same indicators the streaming consumer computes
+live, and writes partitioned a delta table partitioned by symbol to silver/equities_historical/.
 
 """
 

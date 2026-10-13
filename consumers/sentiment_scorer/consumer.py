@@ -44,7 +44,7 @@ consumer = KafkaConsumer(
     group_id=CONSUMER_GROUP,
     value_deserializer=lambda v: json.loads(v.decode("utf-8")),
     auto_offset_reset="earliest",
-    enable_auto_commit=True,
+    enable_auto_commit=False,
 )
 consumer.subscribe(INPUT_TOPICS)
 
@@ -73,8 +73,8 @@ def score_text(text: str) -> dict:
 
 
 def process_message(topic: str, data: dict):
-    # 7/8/2026: Reddit is not working, write ghost infra so we can switch if needed
-    source = "reddit" if topic == "sentiment.reddit" else "stocktwits"
+    # Reddit was rejectted so we only have stocktwits for now
+    source = topic.split(".", 1)[1]
     ticker = data["ticker"]
     text = data.get("text", "") or ""
     if not text.strip():
@@ -166,8 +166,8 @@ def flush_scored_posts():
 
     data = pa.Table.from_pandas(df, preserve_index=False)
 
-    # Kafka auto-commit is at-least-once so a restart can re-score a post. 
-    # MERGE on the post identity keeps one row per (source, post_id, ticker).
+    # Offsets are committed only after this flush 
+    # MERGE keeps one row per (source, post_id, ticker).
     try:
         (
             DeltaTable(SCORED_BASE)
@@ -202,6 +202,7 @@ def run():
         if time.time() - last_flush >= FLUSH_INTERVAL_SECONDS:
             flush_scored_posts()
             flush_aggregates()
+            consumer.commit()  # only now is the batch durable; see flush_scored_posts
             last_flush = time.time()
 
 

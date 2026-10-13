@@ -1,3 +1,9 @@
+
+"""
+No longer maintained because Reddit rejected API access
+kafka-init no longer creates the sentiment.reddit topic
+"""
+
 import json
 import os
 import re
@@ -16,7 +22,7 @@ KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
 SUBREDDITS = "wallstreetbets+investing+stocks"
 TOPIC = "sentiment.reddit"
 
-# Case sensitive to seperate "SPY" from words like "spy"
+# Case sensitive to separate "SPY" from words like "spy"
 # Hardcoded for temporary phase 2 development, will be later driven by user watchlist
 TICKER_PATTERNS = {
     "AAPL": re.compile(r'\$?\bAAPL\b'),

@@ -18,7 +18,7 @@ the two main options.
   master and a worker. Flink needs a JobManager, TaskManager, and state
   backend configuration.
 - **Latency:** bars run on 30-second micro-batch triggers. Spark has slightly higher latency
-  compared to flint, which is fine.
+  compared to flink, which is fine.
 
 ## Consequences
 
