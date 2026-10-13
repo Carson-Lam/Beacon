@@ -1,7 +1,6 @@
 import json
 import os
 import time
-from datetime import datetime, timezone
 from dotenv import load_dotenv
 from kafka import KafkaProducer
 import requests
