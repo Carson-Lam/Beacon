@@ -30,8 +30,7 @@ from FinBERT's classification not StockTwits' user-declared tag for accuracy. Sa
 
 ## Consequences
 
-- `sentiment.reddit` and `sentiment.stocktwits` are separate Kafka
-  topics so Reddit can be activated later with zero changes to the scoring consumer.
+- Reddit can be re-activated by adding sentiment.reddit back to kafka-init and the scorer’s INPUT_TOPICS
 
 - The FinBERT scorer's rolling-window state is in-memory only so restart silently resets
   `mention_count_24h`, `bullish_ratio`, and `velocity` to zero rather

@@ -22,6 +22,7 @@ TICKER_TO_STOCKTWITS_SYMBOL = {
 
 BASE_URL = "https://api.stocktwits.com/api/2/streams/symbol/{symbol}.json"
 
+# public endpoint rejects non-browser user agents
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 }

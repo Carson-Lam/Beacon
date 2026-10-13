@@ -1,7 +1,7 @@
 """
 Append raw kafka messages to a bronze table
 
-Payload kept as raw JSON string. Kafka metadata makaes every row traceable to original source message
+Payload kept as raw JSON string. Kafka metadata makes every row traceable to original source message
 
 """
 
