@@ -50,3 +50,21 @@ def macd(close: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9):
     signal_line = macd_line.ewm(span=signal, adjust=False).mean()
     hist = macd_line - signal_line
     return macd_line, signal_line, hist
+
+def indicator_frame(close: pd.Series) -> pd.DataFrame:
+    """
+    Every Beacon indicator for one symbol's close series index-aligned with close.
+    """
+    bb_upper, bb_middle, bb_lower = bollinger_bands(close, 20, 2)
+    macd_line, macd_signal, macd_hist = macd(close, 12, 26, 9)
+    return pd.DataFrame({
+        "sma_20": sma(close, 20),
+        "sma_50": sma(close, 50),
+        "rsi_14": rsi(close, 14),
+        "bb_upper": bb_upper,
+        "bb_middle": bb_middle,
+        "bb_lower": bb_lower,
+        "macd": macd_line,
+        "macd_signal": macd_signal,
+        "macd_hist": macd_hist,
+    })

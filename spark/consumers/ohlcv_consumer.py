@@ -1,31 +1,42 @@
 """
-Spark Structured Streaming consumer for market.equities: OHLCV bars + technical indicators.
+Spark Structured Streaming consumer for the market
 
-Mirrors spark/consumers/crypto_consumer.py; 
+One module for both asset classes:
+    spark-submit ... ohlcv_consumer.py crypto
+    spark-submit ... ohlcv_consumer.py equities
+
+Writes to silver:
+- 1-min bars and indicators: foreachBatch with a pruned MERGE on (symbol, window_date, window_start)
+- 5-min bars: Spark's native Delta streaming sink 
 """
 
 import sys
 sys.path.append("/opt/spark-apps")
 
+from datetime import timedelta
+
 import pandas as pd
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import (
-    col, from_json, to_date, window, first, last, max as spark_max, min as spark_min, sum as spark_sum,
+    col, from_json, to_date, window, max_by, min_by, max as spark_max, min as spark_min, sum as spark_sum,
 )
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, TimestampType
 
-from datetime import timedelta
 from common.delta_utils import recent_bars, sanitize_symbol, upsert
-from indicators.ta_indicators import sma, rsi, bollinger_bands, macd
+from indicators.ta_indicators import indicator_frame
+
+if len(sys.argv) != 2 or sys.argv[1] not in ("crypto", "equities"):
+    sys.exit("usage: ohlcv_consumer.py crypto|equities")
+ASSET = sys.argv[1]
 
 KAFKA_BOOTSTRAP = "kafka:29092"
-TOPIC = "market.equities"
-OHLCV_BASE = "/opt/spark-data/silver/ohlcv/equities"
-FEATURES_BASE = "/opt/spark-data/silver/indicators/equities"
-CHECKPOINT_BASE = "/opt/spark-data/_checkpoints/equities"
+TOPIC = f"market.{ASSET}"
+OHLCV_BASE = f"/opt/spark-data/silver/ohlcv/{ASSET}"
+FEATURES_BASE = f"/opt/spark-data/silver/indicators/{ASSET}"
+CHECKPOINT_BASE = f"/opt/spark-data/_checkpoints/{ASSET}"
 
-LOOKBACK_DAYS = 7  
-HISTORY_BARS = 200 
+LOOKBACK_DAYS = 7    
+HISTORY_BARS = 200   # well past SMA-50 and MACD warm-up
 PARTITION_COLS = ["symbol", "window_date"]
 MERGE_KEYS = ["symbol", "window_date", "window_start"]
 
@@ -40,7 +51,7 @@ schema = StructType([
 ])
 
 spark = (
-    SparkSession.builder.appName("beacon-equities-ohlcv")
+    SparkSession.builder.appName(f"beacon-{ASSET}-ohlcv")
     .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
     .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
     .config("spark.sql.session.timeZone", "UTC")
@@ -67,13 +78,14 @@ parsed = (
 
 
 def make_ohlcv(window_duration: str):
+    # open/close by event time, not arrival order: first()/last() are nondeterministic in an aggregation
     return (
         parsed.groupBy(window(col("timestamp"), window_duration), col("symbol"))
         .agg(
-            first("price").alias("open"),
+            min_by("price", "timestamp").alias("open"),
             spark_max("price").alias("high"),
             spark_min("price").alias("low"),
-            last("price").alias("close"),
+            max_by("price", "timestamp").alias("close"),
             spark_sum("size").alias("volume"),
         )
         .select(
@@ -90,12 +102,13 @@ def process_1min_batch(batch_df, batch_id):
     batch_df.persist() 
     try:
         count = batch_df.count()
-        print(f"[1min batch {batch_id}] rows={count}", flush=True)
+        print(f"[{ASSET} 1min batch {batch_id}] rows={count}", flush=True)
         if count == 0:
             return
 
-        upsert(spark, new_rows_df, FEATURES_BASE, MERGE_KEYS, PARTITION_COLS, range_col="window_start")
-        # partition-pruned read for every symbol in the batch
+        upsert(spark, batch_df, f"{OHLCV_BASE}/1min", MERGE_KEYS, PARTITION_COLS, range_col="window_start")
+
+        # One partition-pruned read for every symbol in the batch
         new_bars = batch_df.select("symbol", "window_start").toPandas()
         since = new_bars["window_start"].min().date() - timedelta(days=LOOKBACK_DAYS)
         symbols = sorted(new_bars["symbol"].unique().tolist())
@@ -104,26 +117,10 @@ def process_1min_batch(batch_df, batch_id):
         frames = []
         for symbol, h in history.groupby("symbol"):
             h = h.sort_values("window_start").reset_index(drop=True)
-            close = h["close"]
-            bb_upper, bb_middle, bb_lower = bollinger_bands(close, 20, 2)
-            macd_line, macd_signal, macd_hist = macd(close, 12, 26, 9)
-
-            features = pd.DataFrame({
-                "symbol": symbol,
-                "window_start": h["window_start"],
-                "window_end": h["window_end"],
-                "close": close,
-                "sma_20": sma(close, 20),
-                "sma_50": sma(close, 50),
-                "rsi_14": rsi(close, 14),
-                "bb_upper": bb_upper,
-                "bb_middle": bb_middle,
-                "bb_lower": bb_lower,
-                "macd": macd_line,
-                "macd_signal": macd_signal,
-                "macd_hist": macd_hist,
-            })
-
+            features = pd.concat(
+                [h[["symbol", "window_start", "window_end", "close"]], indicator_frame(h["close"])],
+                axis=1,
+            )
             new_starts = set(new_bars.loc[new_bars["symbol"] == symbol, "window_start"])
             frames.append(features[features["window_start"].isin(new_starts)])
 
@@ -133,9 +130,9 @@ def process_1min_batch(batch_df, batch_id):
         if new_rows.empty:
             return
 
-        # One MERGE for all symbols
+        # One MERGE for all symbols 
         new_rows_df = spark.createDataFrame(new_rows).withColumn("window_date", to_date(col("window_start")))
-        upsert(spark, new_rows_df, FEATURES_BASE, MERGE_KEYS, PARTITION_COLS)
+        upsert(spark, new_rows_df, FEATURES_BASE, MERGE_KEYS, PARTITION_COLS, range_col="window_start")
     finally:
         batch_df.unpersist()
 

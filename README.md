@@ -22,7 +22,7 @@ Beacon is a real-time financial market intelligence platform that ingests live m
 <br>
 
 **Current stack:**
-- **Ingestion:** Alpaca Markets WebSocket (equities + crypto), StockTwits REST polling → Apache Kafka
+- **Ingestion:** Alpaca Markets WebSocket (equities + crypto), StockTwits REST polling → Apache Kafka 
 - **Topics:** `market.equities`, `market.crypto`, `sentiment.stocktwits`, `sentiment.scored` (1 partition each)
 - **Processing:** PySpark Structured Streaming, FinBERT sentiment scoring
 - **Orchestration:** Apache Airflow 
@@ -107,7 +107,20 @@ cp .env.example .env
 docker compose up -d
 ```
 
-**4. Run a producer**
+**4. Run the producers**
+
+Run each in its own terminal from the repository's root.
+```bash
+# Crypto (24/7)
+pip install -r producers/crypto/requirements.txt
+python producers/crypto/producer.py
+
+# Equities (market hours only)
+pip install -r producers/equities/requirements.txt
+python producers/equities/producer.py
+```
+
+**5. Run the Spark streaming consumers**
 ```bash
 docker compose up -d spark-master spark-worker
 
@@ -123,16 +136,17 @@ docker exec -it beacon-spark-master /opt/spark/bin/spark-submit \
   --master spark://spark-master:7077 \
   --total-executor-cores 1 --executor-memory 1g \
   --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1,io.delta:delta-spark_2.12:3.2.0 \
-  /opt/spark-apps/consumers/crypto_consumer.py
+  /opt/spark-apps/consumers/ohlcv_consumer.py crypto
 
 # Equities (market hours only)
 docker exec -it beacon-spark-master /opt/spark/bin/spark-submit \
   --master spark://spark-master:7077 \
   --total-executor-cores 1 --executor-memory 1g \
   --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1,io.delta:delta-spark_2.12:3.2.0 \
-  /opt/spark-apps/consumers/equities_consumer.py
+  /opt/spark-apps/consumers/ohlcv_consumer.py equities
 ```
 Spark master UI: http://localhost:8080 
+App UIs (executors, streaming tabs): http://localhost:4040–4042
 
 Raw messages land in (`data/bronze/kafka/`). Bars go to (`data/silver/ohlcv/`), indicators to (`data/silver/indicators/`).
 
