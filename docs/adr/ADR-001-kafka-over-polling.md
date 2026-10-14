@@ -21,3 +21,8 @@ Use Kafka as the central streaming backbone. All producers publish to Kafka topi
 - Producers and consumers are fully decoupled. Consumers can be added without touching producers
 - Messages are replayable, good for debugging.
 - Adds overhead, but Docker Compose handles it locally.
+
+## Update (2026-10-13)
+
+The local broker has no volume, so it's replay window is one session. Spark checkpoints also wipe
+on cold start. Replay comes from the bronze layer instead of kafka.

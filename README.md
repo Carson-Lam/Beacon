@@ -2,11 +2,14 @@
 ### Real-Time Financial Market Intelligence Platform
 ![CI](https://github.com/Carson-Lam/Beacon/actions/workflows/ci.yml/badge.svg)
 ![Python](https://img.shields.io/badge/Python-3.13-blue)
-![Kafka](https://img.shields.io/badge/Apache%20Kafka-7.6.0-black)
+![Kafka](https://img.shields.io/badge/Apache%20Kafka-3.6%20KRaft-black)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED)
 ![Spark](https://img.shields.io/badge/Apache%20Spark-3.5.1-E25A1C)
 ![Airflow](https://img.shields.io/badge/Apache%20Airflow-2.9.0-017CEE)
 ![HuggingFace](https://img.shields.io/badge/HuggingFace-FinBERT-FFD21E)
+![Delta Lake](https://img.shields.io/badge/Delta%20Lake-3.2-00ADD4)
+![dbt](https://img.shields.io/badge/dbt-1.12-FF694B)
+![DuckDB](https://img.shields.io/badge/DuckDB-warehouse-FFF000)
 
 Beacon is a real-time financial market intelligence platform that ingests live market data, processes it through a streaming pipeline, and surfaces actionable research insights via a dashboard and AI agent interface.
 
@@ -26,9 +29,9 @@ Beacon is a real-time financial market intelligence platform that ingests live m
 - **Topics:** `market.equities`, `market.crypto`, `sentiment.stocktwits`, `sentiment.scored` (1 partition each)
 - **Processing:** PySpark Structured Streaming, FinBERT sentiment scoring
 - **Orchestration:** Apache Airflow 
-- **Storage:** Parquet (local); dbt + Delta Lake + DuckDB + Snowflake *(Phase 3)*
-- **ML:** FinBERT sentiment, Isolation Forest anomaly detection *(Phase 3)*
-- **Serving:** FastAPI + Streamlit + MCP server *(Phase 4)*
+- **Storage:** Delta Lake medallion (bronze/silver/gold), dbt-core, DuckDB warehouse 
+- **ML:** FinBERT, price-movement/volatility model (XGBoost or small PyTorch) with MLflow *(Phase 4)*
+- **Serving:** FastAPI + React/D3 dashboard (WebSocket-fed) + MCP server *(Phases 4–6)*
 
 ## Data Storage
 
@@ -48,8 +51,7 @@ Beacon uses a medallion layout under `data/`. Each layer has one job and one set
 | **Silver** `data/silver/` | OHLCV bars, indicators, daily equity history, scored posts, sentiment aggregates | Spark consumers, Airflow DAGs, FinBERT scorer | dbt staging models |
 | **Gold** `data/gold/` | dbt marts | dbt | Dashboard, feature store, MCP server |
 
-dbt reads the silver Delta tables in place (DuckDB `delta_scan()`), builds staging and
-intermediate views, and writes the gold marts as Parquet to `data/gold/`. To generate lineage
+Bronze is the permanent raw record for silver. dbt reads the silver Delta tables in place (DuckDB `delta_scan()`), builds staging and intermediate views, and writes the gold marts as Parquet to `data/gold/`. To generate lineage
 docs, run
 ```bash
 docker exec beacon-dbt dbt docs generate --static
@@ -79,10 +81,12 @@ beacon/
 ├── airflow/
 │   ├── dags/                   # historical_backfill, daily_refresh, lakehouse_maintenance
 │   └── Dockerfile
-├── config/tickers.csv          # Tracked equities for Airflow, dbt seeds
+├── dbt/                        # dbt-core + DuckDB over Delta
+├── tests/                      # pytest: indicators, OHLCV bars, ingest validation
+├── config/tickers.csv          # Tracked tickers: Airflow DAGs and dbt seed
+├── data/                       # DuckDB Lakehouse (gitignored)
 ├── docs/adr/                   # Architecture Decision Records
-├── data/                       # Lakehouse (gitignored): bronze/; silver; gold;
-├── dbt/                        # dbt-core + duckDB for delta_scan()
+├── .github/workflows/ci.yml    # lint, test, dbt: required checks on main
 └── docker-compose.yml
 ```
 
@@ -204,3 +208,5 @@ coverage)
 - [ADR-002: Reddit Sentiment Ingestion](docs/adr/ADR-002-reddit-sentiment-ingestion.md)
 - [ADR-003: Social Sentiment Data Sources](docs/adr/ADR-003-social-sentiment-evaluation.md)
 - [ADR-004: Spark Structured Streaming vs. Flink](docs/adr/ADR-004-spark-vs-flink.md)
+- [ADR-006: Delta Lake for the Lakehouse](docs/adr/ADR-006-delta-lake.md)
+- [ADR-007: DuckDB + dbt as the Warehouse](docs/adr/ADR-007-duckdb-warehouse.md)
