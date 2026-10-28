@@ -1,24 +1,23 @@
 import json
 import os
+import sys
 import time
+from pathlib import Path
+
 from dotenv import load_dotenv
 from kafka import KafkaProducer
 import requests
-
 load_dotenv()
 
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
 TOPIC = "sentiment.stocktwits"
 POLL_INTERVAL_SECONDS = 60
 
-# StockTwits has it's own symbol format
-TICKER_TO_STOCKTWITS_SYMBOL = {
-    "AAPL": "AAPL",
-    "TSLA": "TSLA",
-    "SPY": "SPY",
-    "BTC": "BTC.X",
-    "ETH": "ETH.X",
-}
+# Live rows of config/tickers.csv. 
+# StockTwits has its own symbol format so crypto needs the .X 
+sys.path.append(str(Path(__file__).resolve().parents[2] / "config"))
+from universe import load_universe  # noqa: E402
+TICKER_TO_STOCKTWITS_SYMBOL = {row["ticker"]: row["stocktwits_symbol"] for row in load_universe(live=True)}
 
 BASE_URL = "https://api.stocktwits.com/api/2/streams/symbol/{symbol}.json"
 

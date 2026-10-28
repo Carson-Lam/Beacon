@@ -1,15 +1,19 @@
 import json
 import os
+import sys
+from pathlib import Path
+
 from dotenv import load_dotenv
 from kafka import KafkaProducer
 from alpaca.data.live import CryptoDataStream
-
 load_dotenv()
 
 ALPACA_API_KEY = os.getenv("ALPACA_API_KEY")
 ALPACA_SECRET_KEY = os.getenv("ALPACA_SECRET_KEY")
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
-SYMBOLS = ["BTC/USD", "ETH/USD"]
+sys.path.append(str(Path(__file__).resolve().parents[2] / "config"))
+from universe import load_universe  
+SYMBOLS = [row["alpaca_symbol"] for row in load_universe(asset_class="crypto", live=True)]
 TOPIC = "market.crypto"
 
 producer = KafkaProducer(

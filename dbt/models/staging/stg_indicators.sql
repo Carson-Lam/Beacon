@@ -3,9 +3,9 @@ with unioned as (
 )
 
 select
-    split_part(symbol, '-', 1)        as ticker,
-    symbol,
-    asset_class,
+    t.ticker,
+    u.symbol,
+    u.asset_class,
     cast(window_start as timestamptz) as bar_start,
     cast(window_end as timestamptz)   as bar_end,
     cast(close as double)             as close,
@@ -18,4 +18,7 @@ select
     {{ nan_to_null('macd') }}         as macd,
     {{ nan_to_null('macd_signal') }}  as macd_signal,
     {{ nan_to_null('macd_hist') }}    as macd_hist
-from unioned
+from unioned u
+-- Same symbol -> ticker mapping as stg_ohlcv_1min
+left join {{ ref('tickers') }} t
+    on replace(t.alpaca_symbol, '/', '-') = u.symbol

@@ -1,8 +1,9 @@
-ticker,asset_class
-AAPL,equity
-TSLA,equity
-SPY,equity
-MSFT,equity
-NVDA,equity
-BTC,crypto
-ETH,crypto
+ticker,asset_class,alpaca_symbol,yfinance_symbol,stocktwits_symbol,live
+AAPL,equity,AAPL,AAPL,AAPL,true
+TSLA,equity,TSLA,TSLA,TSLA,true
+SPY,equity,SPY,SPY,SPY,true
+MSFT,equity,MSFT,MSFT,MSFT,true
+NVDA,equity,NVDA,NVDA,NVDA,true
+BTC,crypto,BTC/USD,BTC-USD,BTC.X,true
+ETH,crypto,ETH/USD,ETH-USD,ETH.X,true
+BRK.B,equity,BRK.B,BRK-B,BRK.B,false
