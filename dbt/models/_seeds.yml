@@ -2,7 +2,9 @@ version: 2
 
 seeds:
   - name: tickers
-    description: Tracked tickers. Single source of truth shared with the Airflow DAGs.
+    description: >
+      Beacon's symbol universe (config/tickers.csv). Single source of truth for the
+      producers, the Airflow DAGs and dbt.
     columns:
       - name: ticker
         data_tests: [not_null, unique]
@@ -11,3 +13,7 @@ seeds:
           - not_null
           - accepted_values:
               arguments: {values: [equity, crypto]}
+      - {name: alpaca_symbol, data_tests: [not_null, unique]}
+      - {name: yfinance_symbol, data_tests: [not_null, unique]}
+      - {name: stocktwits_symbol, data_tests: [not_null, unique]}
+      - {name: live, data_tests: [not_null]}

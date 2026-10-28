@@ -5,3 +5,4 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "spark"))
 sys.path.insert(0, str(ROOT / "airflow" / "dags"))
+sys.path.insert(0, str(ROOT / "config"))

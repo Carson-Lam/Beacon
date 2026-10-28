@@ -1,5 +1,8 @@
 import json
 import os
+import sys
+from pathlib import Path
+
 from dotenv import load_dotenv
 from kafka import KafkaProducer
 from alpaca.data.live import StockDataStream
@@ -9,7 +12,9 @@ load_dotenv()
 ALPACA_API_KEY = os.getenv("ALPACA_API_KEY")
 ALPACA_SECRET_KEY = os.getenv("ALPACA_SECRET_KEY")
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
-TICKERS = os.getenv("EQUITY_TICKERS", "AAPL,TSLA,SPY,MSFT,NVDA").split(",")
+sys.path.append(str(Path(__file__).resolve().parents[2] / "config")) # Live equity rows of config/tickers.csv
+from universe import load_universe  
+TICKERS = [row["alpaca_symbol"] for row in load_universe(asset_class="equity", live=True)]
 TOPIC = "market.equities"
 
 producer = KafkaProducer(

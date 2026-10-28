@@ -83,7 +83,7 @@ beacon/
 │   └── Dockerfile
 ├── dbt/                        # dbt-core + DuckDB over Delta
 ├── tests/                      # pytest: indicators, OHLCV bars, ingest validation
-├── config/tickers.csv          # Tracked tickers: Airflow DAGs and dbt seed
+├── config/tickers.csv          # Symbol universe (producers, DAGs, dbt seed)
 ├── data/                       # DuckDB Lakehouse (gitignored)
 ├── docs/adr/                   # Architecture Decision Records
 ├── .github/workflows/ci.yml    # lint, test, dbt: required checks on main
@@ -201,9 +201,8 @@ CI (`.github/workflows/ci.yml`) runs three required checks on every push and PR:
 coverage)
 - `dbt` (`dbt build` against fixture Delta tables)
 
-
-
 ## Architectural Decision Records
+
 - [ADR-001: Kafka as the Streaming Backbone](docs/adr/ADR-001-kafka-over-polling.md)
 - [ADR-002: Reddit Sentiment Ingestion](docs/adr/ADR-002-reddit-sentiment-ingestion.md)
 - [ADR-003: Social Sentiment Data Sources](docs/adr/ADR-003-social-sentiment-evaluation.md)

@@ -29,3 +29,7 @@ seeds:
       +column_types:
         ticker: varchar
         asset_class: varchar
+        alpaca_symbol: varchar
+        yfinance_symbol: varchar
+        stocktwits_symbol: varchar
+        live: boolean

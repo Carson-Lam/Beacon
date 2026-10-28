@@ -16,23 +16,26 @@ from airflow.operators.python import PythonOperator
 
 TMP_BASE = "/opt/airflow/data/_tmp/historical"
 TABLE_PATH = "/opt/airflow/data/silver/equities_historical"
-CONFIG_PATH = "/opt/airflow/config/tickers.csv"
+
+def load_equities():
+    import sys
+    sys.path.append("/opt/airflow/config")
+    from universe import load_universe
+    return load_universe(asset_class="equity")
+
 
 def load_tickers():
-    import csv
-    with open(CONFIG_PATH, newline="") as f:
-        return [row["ticker"] for row in csv.DictReader(f) if row["asset_class"] == "equity"]
-
+    return [row["ticker"] for row in load_equities()]
 
 def fetch_history(**context):
     import pandas as pd
     import yfinance as yf
 
-    tickers = load_tickers()
     os.makedirs(f"{TMP_BASE}/raw", exist_ok=True)
 
-    for ticker in tickers:
-        df = yf.download(ticker, period="2y", interval="1d", progress=False)
+    for row in load_equities():
+        ticker = row["ticker"]
+        df = yf.download(row["yfinance_symbol"], period="2y", interval="1d", progress=False)
         df = df.dropna()
 
         # Flatten multi index columns that yfinance uses for some ETFs
