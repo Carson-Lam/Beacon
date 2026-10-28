@@ -3,7 +3,7 @@ with unioned as (
 )
 
 select
-    split_part(symbol, '-', 1)        as t.ticker,
+    t.ticker,
     u.symbol,
     u.asset_class,
     cast(window_start as timestamptz) as bar_start,
