@@ -1,7 +1,7 @@
 """
 historical_backfill
 
-One-time DAG that pulls 2 years of daily OHLCV per tracked equity via
+One-time DAG that pulls 10* years of daily OHLCV per tracked equity via
 yfinance, computes the same indicators the streaming consumer computes
 live, and writes partitioned a delta table partitioned by symbol to silver/equities_historical/.
 
@@ -35,12 +35,15 @@ def fetch_history(**context):
 
     for row in load_equities():
         ticker = row["ticker"]
-        df = yf.download(row["yfinance_symbol"], period="2y", interval="1d", progress=False)
+        df = yf.download(row["yfinance_symbol"], period="10y", interval="1d", progress=False)
         df = df.dropna()
 
         # Flatten multi index columns that yfinance uses for some ETFs
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = df.columns.get_level_values(0)
+
+        if df.empty:
+            raise ValueError(f"{ticker}: yfinance returned no bars for {row['yfinance_symbol']}")
 
         df = df.reset_index()
         df.to_parquet(f"{TMP_BASE}/raw/{ticker}.parquet", index=False)
@@ -112,7 +115,7 @@ default_args = {
 
 with DAG(
     dag_id="historical_backfill",
-    description="One-time 2yr daily OHLCV + indicator backfill for tracked equities",
+    description="One-time 10y daily OHLCV + indicator backfill for tracked equities",
     default_args=default_args,
     schedule="@once",
     start_date=datetime(2026, 1, 1),
