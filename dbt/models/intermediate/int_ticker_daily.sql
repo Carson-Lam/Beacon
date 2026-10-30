@@ -4,7 +4,7 @@ select
     ticker,
     asset_class,
     trade_date,
-    close,
+    open, high, low, close, volume,
     lag(close) over w                                as prev_close,
     close - lag(close) over w                        as change_abs,
     close / nullif(lag(close) over w, 0) - 1         as change_pct,

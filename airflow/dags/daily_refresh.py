@@ -42,7 +42,7 @@ def fetch_daily(**context):
 
     for row in load_equities():
         ticker = row["ticker"]
-        df = yf.download(row["yfinance_symbol"], start=target_date, end=end_date, interval="1d", progress=False)
+        df = yf.download(row["yfinance_symbol"], start=target_date, end=end_date, interval="1d", auto_adjust=True, progress=False)
         df = df.dropna()
 
         # yfinance returns multiIndex columns for some tickers like (ticker,field)
@@ -108,9 +108,13 @@ def compute_indicators_task(**context):
         new_raw = pd.read_parquet(raw_path)
         new_row = pd.DataFrame({
             "date": pd.to_datetime(new_raw["Date"]).dt.date,
+            "open": new_raw["Open"].astype(float),
+            "high": new_raw["High"].astype(float),
+            "low": new_raw["Low"].astype(float),
             "close": new_raw["Close"].astype(float),
+            "volume": new_raw["Volume"].astype(float),
         })
-        existing = table.to_pandas(partitions=[("symbol", "=", ticker)], columns=["date", "close"])
+        existing = table.to_pandas(partitions=[("symbol", "=", ticker)], columns=list(new_row.columns))
 
         # De-duplicate on date so a re-run of an existing day doesn't double-count it
         combined = pd.concat([existing, new_row], ignore_index=True)
@@ -123,7 +127,11 @@ def compute_indicators_task(**context):
         features = pd.DataFrame({
             "symbol": ticker,
             "date": combined["date"],
+            "open": combined["open"],
+            "high": combined["high"],
+            "low": combined["low"],
             "close": close,
+            "volume": combined["volume"],
             "sma_20": sma(close, 20),
             "sma_50": sma(close, 50),
             "rsi_14": rsi(close, 14),

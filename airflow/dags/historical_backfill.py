@@ -1,7 +1,7 @@
 """
 historical_backfill
 
-One-time DAG that pulls 10* years of daily OHLCV per tracked equity via
+One-time DAG that pulls 10 years of daily OHLCV per tracked equity via
 yfinance, computes the same indicators the streaming consumer computes
 live, and writes partitioned a delta table partitioned by symbol to silver/equities_historical/.
 
@@ -35,7 +35,7 @@ def fetch_history(**context):
 
     for row in load_equities():
         ticker = row["ticker"]
-        df = yf.download(row["yfinance_symbol"], period="10y", interval="1d", progress=False)
+        df = yf.download(row["yfinance_symbol"], period="10y", interval="1d", auto_adjust=True, progress=False)
         df = df.dropna()
 
         # Flatten multi index columns that yfinance uses for some ETFs
@@ -69,10 +69,12 @@ def compute_indicators_task(**context):
 
         features = pd.DataFrame({
             "symbol": ticker,
-            # A trading day, not a timestamp. It is half of the (symbol, date) key that
-            # daily_refresh MERGEs on, so both DAGs must store it the same way.
             "date": pd.to_datetime(df["Date"]).dt.date,
+            "open": df["Open"].astype(float),
+            "high": df["High"].astype(float),
+            "low": df["Low"].astype(float),
             "close": close,
+            "volume": df["Volume"].astype(float),
             "sma_20": sma(close, 20),
             "sma_50": sma(close, 50),
             "rsi_14": rsi(close, 14),
@@ -100,7 +102,8 @@ def write_delta_task(**context):
     )
 
     table = pa.Table.from_pandas(df, preserve_index=False)
-    write_deltalake(TABLE_PATH, table, mode="overwrite", partition_by=["symbol"])
+    # schema_mode="overwrite" is required to overwrite the schema when writing to an existing table
+    write_deltalake(TABLE_PATH, table, mode="overwrite", schema_mode="overwrite", partition_by=["symbol"])
     for symbol, n in df.groupby("symbol").size().items():
         print(f"[WRITE] {symbol}: {n} rows")
     print(f"[WRITE] {len(df)} total rows to {TABLE_PATH}")
