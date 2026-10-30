@@ -36,6 +36,8 @@ def ind(sma20, sma50, rsi, mid, half_width, macd, signal):
         "macd": macd, "macd_signal": signal, "macd_hist": macd - signal,
     }
 
+def daily(o, h, low, c, v):
+    return {"open": o, "high": h, "low": low, "close": c, "volume": v}
 
 def write(rel, rows):
     df = pd.DataFrame(rows)
@@ -74,11 +76,12 @@ write("indicators/crypto", [
 ])
 
 write("equities_historical", [
-    {"symbol": "AAPL", "date": date(2026, 9, 29), "close": 228.0, **WARMUP},
-    {"symbol": "AAPL", "date": date(2026, 9, 30), "close": 229.5, **ind(228.4, 226.0, 58.0, 228.4, 3.1, 1.2, 1.0)},
-    {"symbol": "AAPL", "date": date(2026, 10, 1), "close": 227.9, **ind(228.6, 226.2, 52.0, 228.6, 3.0, 1.0, 1.05)},
+    {"symbol": "AAPL", "date": date(2026, 9, 29), **daily(227.0, 228.8, 226.1, 228.0, 4.1e7), **WARMUP},
+    {"symbol": "AAPL", "date": date(2026, 9, 30), **daily(228.2, 230.0, 227.5, 229.5, 3.8e7),
+     **ind(228.4, 226.0, 58.0, 228.4, 3.1, 1.2, 1.0)},
+    {"symbol": "AAPL", "date": date(2026, 10, 1), **daily(229.0, 229.4, 227.2, 227.9, 4.4e7),
+     **ind(228.6, 226.2, 52.0, 228.6, 3.0, 1.0, 1.05)},
 ])
-
 
 def post(ticker, post_id, at, text, pos, neg, neu, label, user_label):
     return {

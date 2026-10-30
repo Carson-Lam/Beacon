@@ -40,8 +40,8 @@ models:
   - name: mart_ticker_history
     description: >
       Chart series for the Ticker Detail screen. timeframe '1m' holds streamed bars with
-      OHLC and intraday indicators; '1d' holds daily closes with daily indicators (OHLC
-      null; the daily pipeline stores close only). 5-minute bars (stg_ohlcv_5min) are staged
+      OHLC and intraday indicators; '1d' holds split- and dividend-adjusted daily OHLCV
+      with daily indicators. 5-minute bars (stg_ohlcv_5min) are staged
       and tested but not joined here yet
     data_tests:
       - unique_combination:
