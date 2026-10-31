@@ -102,3 +102,27 @@ models:
       - {name: latest_at, description: Most recent bar, post, aggregate or trade date in the table.}
       - {name: minutes_since_latest, description: Minutes between latest_at and checked_at.}
       - {name: checked_at, description: When this mart was built.}
+
+  - name: mart_model_features
+    description: >
+      Feature store for the beacon-direction ML model. One row per equity per
+      trading day, scale-invariant features only so one model can be pooled across
+      symbols. Read by training (ml/train.py) and nightly inference (model_inference).
+      Rows start once every feature is warmed up (~50 trading days) and holds no labels.
+    data_tests:
+      - unique_combination:
+          arguments: {columns: [ticker, trade_date]}
+    columns:
+      - {name: ticker, description: "{{ doc('ticker') }}", data_tests: [not_null]}
+      - {name: trade_date, description: Trading day the features are as of (close of that day)., data_tests: [not_null]}
+      - {name: ret_1d, description: Close-to-close return over 1 trading day.}
+      - {name: ret_5d, description: Close-to-close return over 5 trading days.}
+      - {name: ret_20d, description: Close-to-close return over 20 trading days.}
+      - {name: close_vs_sma20, description: "close / sma_20 − 1."}
+      - {name: close_vs_sma50, description: "close / sma_50 − 1."}
+      - {name: rsi_14, description: "{{ doc('rsi_14') }}"}
+      - {name: macd_hist_norm, description: MACD histogram divided by close.}
+      - {name: bb_pct_b, description: "Bollinger %B: (close − bb_lower) / (bb_upper − bb_lower). 0 at the lower band, 1 at the upper; can go outside 0–1."}
+      - {name: realized_vol_20d, description: Sample standard deviation of the last 20 daily returns (not annualised).}
+      - {name: volume_z_20d, description: "Volume z-score: today against the mean and standard deviation of the 20 prior sessions."}
+      - {name: spy_ret_5d, description: SPY 5-day return on the same date. Market context.}
