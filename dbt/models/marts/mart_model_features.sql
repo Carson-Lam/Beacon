@@ -5,12 +5,20 @@
 --
 -- A row exists only once every feature is warmed up (~50 trading days).
 -- No row means not enough history to score.
-
 with daily as (
     select
-        ticker, trade_date, close, volume, sma_20, sma_50, rsi_14, bb_upper, bb_lower, macd_hist,
-        close / lag(close) over (partition by ticker order by trade_date) - 1 as ret_1d
+        ticker, trade_date, open, high, low, close, volume,
+        sma_20, sma_50, rsi_14, bb_upper, bb_lower, macd_hist,
+        close / lag(close) over by_day - 1                                        as ret_1d,
+        lag(close) over by_day                                                    as prev_close,
+        lag(high) over by_day                                                     as prev_high,
+        lag(low) over by_day                                                      as prev_low,
+        case when lag(high) over by_day is not null
+            then cast(high > lag(high) over by_day as integer) end                as is_higher_high,
+        case when lag(low) over by_day is not null
+            then cast(low > lag(low) over by_day as integer) end                  as is_higher_low
     from {{ ref('stg_equities_historical') }}
+    window by_day as (partition by ticker order by trade_date)
 ),
 
 features as (
@@ -30,10 +38,25 @@ features as (
         -- Today against the 20 sessions before it
         case when count(volume) over prior_20 = 20
             then (volume - avg(volume) over prior_20)
-                 / nullif(stddev_samp(volume) over prior_20, 0) end as volume_z_20d
+                 / nullif(stddev_samp(volume) over prior_20, 0) end as volume_z_20d,
+
+        -- Where the close sits against levels already set. 
+        -- (close - level) / close, Positive = above the level.
+        (close - prev_high) / close                                 as dist_prev_high,
+        (close - prev_low) / close                                  as dist_prev_low,
+        case when count(high) over prior_20 = 20
+            then (close - max(high) over prior_20) / close end      as dist_20d_high,
+        case when count(low) over prior_20 = 20
+            then (close - min(low) over prior_20) / close end       as dist_20d_low,
+        case when count(is_higher_high) over last_10 = 10
+            then cast(sum(is_higher_high) over last_10 as integer) end as higher_highs_10d,
+        case when count(is_higher_low) over last_10 = 10
+            then cast(sum(is_higher_low) over last_10 as integer) end  as higher_lows_10d,
+        open / prev_close - 1                                       as gap_pct
     from daily
     window
         by_day   as (partition by ticker order by trade_date),
+        last_10  as (partition by ticker order by trade_date rows between 9 preceding and current row),
         last_20  as (partition by ticker order by trade_date rows between 19 preceding and current row),
         prior_20 as (partition by ticker order by trade_date rows between 20 preceding and 1 preceding)
 ),
@@ -55,4 +78,9 @@ where f.ret_20d          is not null
   and f.bb_pct_b         is not null
   and f.realized_vol_20d is not null
   and f.volume_z_20d     is not null
+  and f.dist_20d_high    is not null
+  and f.dist_20d_low     is not null
+  and f.higher_highs_10d is not null
+  and f.higher_lows_10d  is not null
+  and f.gap_pct          is not null
   and m.spy_ret_5d       is not null
