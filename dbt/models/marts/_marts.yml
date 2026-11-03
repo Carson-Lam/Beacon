@@ -55,11 +55,11 @@ models:
           - accepted_values:
               arguments: {values: ['1m', '1d']}
       - {name: ts, description: "Bar start (1m) or trade date at 00:00 UTC (1d)."}
-      - {name: open, description: Bar open. Null for 1d.}
-      - {name: high, description: Bar high. Null for 1d.}
-      - {name: low, description: Bar low. Null for 1d.}
+      - {name: open, description: Bar open. Split- and dividend-adjusted for 1d.}
+      - {name: high, description: Bar high. Split- and dividend-adjusted for 1d.}
+      - {name: low, description: Bar low. Split- and dividend-adjusted for 1d.}
       - {name: close, description: Bar close (1m) or daily close (1d).}
-      - {name: volume, description: Traded volume in the bar. Null for 1d.}
+      - {name: volume, description: Traded volume in the bar (split-adjusted for 1d).}      
       - {name: sma_20, description: "{{ doc('sma_20') }}"}
       - {name: sma_50, description: "{{ doc('sma_50') }}"}
       - {name: rsi_14, description: "{{ doc('rsi_14') }}"}
