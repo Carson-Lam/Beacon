@@ -21,6 +21,7 @@ with daily as (
     window by_day as (partition by ticker order by trade_date)
 ),
 
+-- Features 
 features as (
     select
         ticker,
@@ -61,15 +62,60 @@ features as (
         prior_20 as (partition by ticker order by trade_date rows between 20 preceding and 1 preceding)
 ),
 
+-- Sentiment. 
+-- A post made after the close counts toward the NEXT session's features
+-- early-close half-days are treated as 16:00 closes.
+
+sessions as (
+    select distinct
+        trade_date,
+        timezone('America/New_York', trade_date + interval 16 hour) as close_at
+    from {{ ref('stg_equities_historical') }}
+),
+
+session_posts as (
+    select p.ticker, s.trade_date, p.finbert_label
+    from {{ ref('stg_sentiment_scored') }} p
+    asof join sessions s on p.posted_at <= s.close_at
+),
+
+session_sentiment as (
+    select
+        ticker,
+        trade_date,
+        mention_count,
+        cast(positive_count as double) / nullif(positive_count + negative_count, 0) as bullish_ratio,
+        mention_count / avg(mention_count) over (
+            partition by ticker order by trade_date
+            rows between 7 preceding and 1 preceding
+        )                                                                            as velocity_vs_prior_7
+    from (
+        select
+            ticker,
+            trade_date,
+            count(*)                                                as mention_count,
+            count(*) filter (where finbert_label = 'positive')      as positive_count,
+            count(*) filter (where finbert_label = 'negative')      as negative_count
+        from session_posts
+        group by 1, 2
+    )
+),
+
 market as (
     select trade_date, ret_5d as spy_ret_5d
     from features
     where ticker = 'SPY'
 )
 
-select f.*, m.spy_ret_5d
+select
+    f.*,
+    m.spy_ret_5d,
+    s.mention_count, -- Null not 0 when there is no sentiment data
+    s.bullish_ratio,
+    s.velocity_vs_prior_7
 from features f
 left join market m using (trade_date)
+left join session_sentiment s using (ticker, trade_date)
 where f.ret_20d          is not null
   and f.close_vs_sma20   is not null
   and f.close_vs_sma50   is not null

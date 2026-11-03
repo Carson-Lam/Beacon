@@ -133,3 +133,6 @@ models:
       - {name: higher_lows_10d, description: "Structure. Days in the last 10 whose low exceeded the previous day's low (0–10)."}
       - {name: gap_pct, description: "Structure. open / previous close − 1."}
       - {name: spy_ret_5d, description: SPY 5-day return on the same date. Market context.}
+      - {name: mention_count, description: "Sentiment. Scored StockTwits posts assigned to this session after prior close. Null where there is no coverage."}
+      - {name: bullish_ratio, description: "Sentiment. FinBERT positive / (positive + negative) for this session's posts. Null if neither."}
+      - {name: velocity_vs_prior_7, description: "Sentiment. mention_count / average mention_count of the 7 prior sessions. Monday absorbs weekend posts so reads high."}
