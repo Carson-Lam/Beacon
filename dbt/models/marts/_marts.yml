@@ -136,3 +136,18 @@ models:
       - {name: mention_count, description: "Sentiment. Scored StockTwits posts assigned to this session after prior close. Null where there is no coverage."}
       - {name: bullish_ratio, description: "Sentiment. FinBERT positive / (positive + negative) for this session's posts. Null if neither."}
       - {name: velocity_vs_prior_7, description: "Sentiment. mention_count / average mention_count of the 7 prior sessions. Monday absorbs weekend posts so reads high."}
+
+  - name: mart_model_labels
+    description: >
+      Training target for the beacon-direction ML model
+    data_tests:
+      - unique_combination:
+          arguments: {columns: [ticker, trade_date]}
+    columns:
+      - {name: ticker, description: "{{ doc('ticker') }}", data_tests: [not_null]}
+      - {name: trade_date, description: Trading day the signal is computed at (close of that day)., data_tests: [not_null]}
+      - name: label
+        description: "1 if the 5-day forward return (open t+1 to open t+6) is positive. Null for the last 6 trading days per ticker."
+        data_tests:
+          - accepted_values:
+              arguments: {values: [0, 1]}
