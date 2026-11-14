@@ -81,6 +81,17 @@ write("equities_historical", [
      **ind(228.4, 226.0, 58.0, 228.4, 3.1, 1.2, 1.0)},
     {"symbol": "AAPL", "date": date(2026, 10, 1), **daily(229.0, 229.4, 227.2, 227.9, 4.4e7),
      **ind(228.6, 226.2, 52.0, 228.6, 3.0, 1.0, 1.05)},
+    # 8 sessions so mart_model_labels has labelled rows and a 6-row null tail
+    {"symbol": "AAPL", "date": date(2026, 10, 2), **daily(228.1, 230.2, 227.6, 229.8, 3.9e7),
+     **ind(228.8, 226.4, 56.0, 228.8, 3.0, 1.1, 1.06)},
+    {"symbol": "AAPL", "date": date(2026, 10, 5), **daily(230.0, 231.5, 229.1, 231.0, 4.0e7),
+     **ind(229.0, 226.6, 60.0, 229.0, 3.1, 1.3, 1.1)},
+    {"symbol": "AAPL", "date": date(2026, 10, 6), **daily(231.2, 232.0, 229.8, 230.4, 3.6e7),
+     **ind(229.2, 226.8, 57.0, 229.2, 3.1, 1.3, 1.15)},
+    {"symbol": "AAPL", "date": date(2026, 10, 7), **daily(230.1, 230.9, 228.0, 228.6, 4.2e7),
+     **ind(229.3, 227.0, 51.0, 229.3, 3.0, 1.1, 1.15)},
+    {"symbol": "AAPL", "date": date(2026, 10, 8), **daily(228.9, 231.0, 228.4, 230.7, 3.7e7),
+     **ind(229.5, 227.2, 55.0, 229.5, 3.0, 1.2, 1.16)},
 ])
 
 def post(ticker, post_id, at, text, pos, neg, neu, label, user_label):
