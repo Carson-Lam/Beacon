@@ -98,6 +98,7 @@ services:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres-airflow/airflow
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       AIRFLOW__CORE__DEFAULT_TIMEZONE: America/New_York
+      MLFLOW_TRACKING_URI: http://mlflow:5000
     entrypoint: /bin/bash
     command:
       - -c
@@ -137,6 +138,7 @@ services:
       - ./config:/opt/airflow/config:ro
       - ./data:/opt/airflow/data
       - ./dbt:/opt/airflow/dbt 
+      - ./ml:/opt/airflow/ml:ro
     command: scheduler
 
   dbt:
@@ -151,6 +153,24 @@ services:
       - ./data:/usr/app/data   # Delta tables 
       - ./config:/usr/app/config:ro
     command: ["tail", "-f", "/dev/null"]  
+
+  # Model registry and experiment tracking
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v3.17.2
+    container_name: beacon-mlflow
+    ports:
+      - "8084:5000"  # UI
+    volumes:
+      - ./data/mlflow:/mlflow  # mlflow.db + artifacts/
+    command:
+      - mlflow
+      - server
+      - --host=0.0.0.0
+      - --port=5000
+      - --backend-store-uri=sqlite:////mlflow/mlflow.db
+      - --serve-artifacts
+      - --artifacts-destination=/mlflow/artifacts
+      - --allowed-hosts=mlflow:5000,localhost:8084,127.0.0.1:8084
 
 volumes:
   airflow_pg_data:
