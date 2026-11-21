@@ -11,7 +11,7 @@ import pandas as pd
 
 PURGE_SESSIONS = 6
 MIN_TRAIN_YEARS = 3  # the first year is partial for indicator warm-up
-
+CALIBRATION_SESSIONS = 252 # 1 trading year
 
 @dataclass(frozen=True)
 class Fold:
@@ -38,3 +38,17 @@ def split(df: pd.DataFrame, fold: Fold, date_col="trade_date"):
     train = df[dates <= fold.train_end]
     test = df[(dates >= fold.test_start) & (dates <= fold.test_end)]
     return train, test
+
+
+
+
+def calibration_split(train: pd.DataFrame, cal_sessions=CALIBRATION_SESSIONS, purge=PURGE_SESSIONS,
+                      date_col="trade_date"):
+    """
+    Splits training rows into classifier rows and a calibration slice
+    """
+    dates = pd.to_datetime(train[date_col])
+    sessions = pd.DatetimeIndex(pd.unique(dates)).sort_values()
+    cal_start = sessions[-cal_sessions]
+    classifier_end = sessions[-cal_sessions - purge - 1]
+    return train[dates <= classifier_end], train[dates >= cal_start]
